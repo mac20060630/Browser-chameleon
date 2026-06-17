@@ -1,5 +1,5 @@
 /**
- * main.js — Entry point for Meccha Chameleon
+ * main.js — Entry point for Browser Chameleon
  * Initializes Three.js scene, connects to server, and boots the game
  */
 import * as THREE from 'three';
@@ -117,5 +117,5 @@ canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 /* ============================================================
    DEV INFO
    ============================================================ */
-console.log('%c🦎 Meccha Chameleon', 'font-size: 24px; font-weight: bold; color: #7c3aed;');
+console.log('%c🦎 Browser Chameleon', 'font-size: 24px; font-weight: bold; color: #7c3aed;');
 console.log('%cPaint. Hide. Survive.', 'font-size: 14px; color: #06b6d4;');

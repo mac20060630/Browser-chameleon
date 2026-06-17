@@ -1,5 +1,5 @@
 /**
- * Meccha Chameleon — Multiplayer Hide-and-Seek Server
+ * Browser Chameleon — Multiplayer Hide-and-Seek Server
  *
  * Express + Socket.io server that manages rooms, game phases,
  * player state, tagging, and scoring.
@@ -712,5 +712,5 @@ function leaveCurrentRoom(socket, ioServer) {
 // ---------------------------------------------------------------------------
 
 httpServer.listen(PORT, () => {
-  console.log(`\n  🦎  Meccha Chameleon server listening on http://localhost:${PORT}\n`);
+  console.log(`\n  🦎  Browser Chameleon server listening on http://localhost:${PORT}\n`);
 });

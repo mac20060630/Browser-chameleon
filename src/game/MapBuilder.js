@@ -2,7 +2,7 @@
  * MapBuilder.js
  *
  * Builds the "Party Room" map — a colourful room full of furniture and
- * decorations for hiders to blend into in the Meccha Chameleon game.
+ * decorations for hiders to blend into in the Browser Chameleon game.
  *
  * Dimensions: ~20 × 15 × 4 units (length × width × height).
  * Every object is built from basic Three.js primitives (boxes, spheres,

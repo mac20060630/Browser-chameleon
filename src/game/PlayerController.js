@@ -2,7 +2,7 @@
  * PlayerController.js
  *
  * First-person / third-person camera and WASD movement controller for the
- * Meccha Chameleon game.
+ * Browser Chameleon game.
  *
  * Features:
  *  • Pointer Lock API for mouse capture

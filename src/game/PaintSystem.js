@@ -1,7 +1,7 @@
 /**
  * PaintSystem.js
  *
- * Core paint system for the Meccha Chameleon game.
+ * Core paint system for the Browser Chameleon game.
  * Handles painting the character model via mouse interaction:
  *  • Brush tool   – freehand painting on body-part UV canvases
  *  • Fill tool    – flood-fill an entire body part with a colour

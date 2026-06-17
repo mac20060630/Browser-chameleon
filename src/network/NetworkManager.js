@@ -1,5 +1,5 @@
 /**
- * NetworkManager — Socket.io client wrapper for Meccha Chameleon
+ * NetworkManager — Socket.io client wrapper for Browser Chameleon
  *
  * Handles all client-server communication: room management, game-phase
  * events, movement sync (throttled 20 Hz), paint sync (debounced 200 ms),
