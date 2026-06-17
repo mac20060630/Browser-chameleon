@@ -507,6 +507,9 @@ io.on('connection', (socket) => {
       playerId: socket.id,
       ready: player.ready,
     });
+    
+    // Broadcast the updated list so clients can re-render UI
+    broadcastPlayerList(room, io);
   });
 
   // -----------------------------------------------------------------------
