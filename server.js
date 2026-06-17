@@ -131,7 +131,12 @@ function serializePlayers(playerMap) {
  */
 function assignRoles(room) {
   const ids = Array.from(room.players.keys());
-  const seekerCount = Math.max(1, Math.round(ids.length * 0.25));
+  let seekerCount;
+  if (ids.length === 1) {
+    seekerCount = 0; // If playing solo, start as a hider
+  } else {
+    seekerCount = Math.max(1, Math.round(ids.length * 0.25));
+  }
 
   // Shuffle ids
   for (let i = ids.length - 1; i > 0; i--) {
@@ -334,6 +339,9 @@ function transitionToLobby(room, io) {
 function checkWinCondition(room, io) {
   if (room.phase !== 'hunt') return;
 
+  // Don't end game if playing solo
+  if (room.players.size < 2) return;
+
   const hiders = Array.from(room.players.values()).filter((p) => p.role === 'hider');
   const aliveHiders = hiders.filter((p) => p.alive);
 
@@ -428,10 +436,6 @@ io.on('connection', (socket) => {
       socket.emit('error', { message: 'Room not found.' });
       return;
     }
-    if (room.phase !== 'lobby') {
-      socket.emit('error', { message: 'Game already in progress.' });
-      return;
-    }
     if (room.players.size >= MAX_PLAYERS_PER_ROOM) {
       socket.emit('error', { message: 'Room is full.' });
       return;
@@ -448,15 +452,33 @@ io.on('connection', (socket) => {
     room.players.set(socket.id, player);
     socketRoomMap.set(socket.id, code);
 
-    socket.join(code);
+    // If joining mid-game, assign a role dynamically
+    if (room.phase !== 'lobby') {
+      const seekers = Array.from(room.players.values()).filter(p => p.role === 'seeker');
+      player.role = seekers.length === 0 ? 'seeker' : 'hider';
+      player.alive = true;
+      player.score = 0;
+    }
+
+    socket.join(room.code);
 
     socket.emit('room-joined', {
       roomCode: code,
       playerId: socket.id,
-      players: serializePlayers(room.players),
+      players: Array.from(room.players.values()),
+      phase: room.phase,
+      timeRemaining: room.timerRemaining,
+      settings: room.settings
     });
 
-    socket.to(code).emit('player-joined', { player: { ...player } });
+    io.to(code).emit('player-joined', { player });
+    
+    // If mid-game, emit midgame specific event
+    if (room.phase !== 'lobby') {
+      socket.to(code).emit('player-joined-midgame', { player });
+    }
+
+    broadcastPlayerList(room, io);
 
     console.log(`[join-room] ${playerName} -> ${code}`);
   });
@@ -493,12 +515,6 @@ io.on('connection', (socket) => {
     }
     if (room.phase !== 'lobby') {
       socket.emit('error', { message: 'Game is not in the lobby phase.' });
-      return;
-    }
-
-    const readyCount = Array.from(room.players.values()).filter((p) => p.ready).length;
-    if (readyCount < 2) {
-      socket.emit('error', { message: 'Need at least 2 ready players to start.' });
       return;
     }
 

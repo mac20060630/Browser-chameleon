@@ -79,12 +79,22 @@ export class GameManager {
 
     net.on('room-joined', (data) => {
       this.playerId = data.playerId;
-      this.ui.lobby.showWaitingRoom(data.roomCode, data.players);
-      this.ui.lobby.setHost(net.isHost());
+      
+      // If joining a game that is already in progress
+      if (data.phase && data.phase !== 'lobby') {
+        this._handleMidGameJoin(data);
+      } else {
+        this.ui.lobby.showWaitingRoom(data.roomCode, data.players);
+        this.ui.lobby.setHost(net.isHost());
+      }
     });
 
     net.on('player-joined', (data) => {
       this._showToast(`${data.player.name} joined!`, 'info');
+    });
+
+    net.on('player-joined-midgame', (data) => {
+      this._createRemotePlayer(data.player.id, data.player.name, data.player.role);
     });
 
     net.on('player-left', (data) => {
@@ -249,6 +259,55 @@ export class GameManager {
         this._startPrepPhase();
       }
     }, 3000);
+  }
+
+  _handleMidGameJoin(data) {
+    const { players, phase, timeRemaining, settings } = data;
+    
+    // Construct roles map
+    const roles = {};
+    players.forEach(p => roles[p.id] = p.role);
+    
+    this.role = roles[this.playerId];
+    this.phase = phase;
+    this.timeRemaining = timeRemaining;
+
+    // Hide lobby instantly
+    this.ui.lobby.hide();
+    this.ui.lobby.hideWaitingRoom();
+
+    // Initialize 3D world with the provided settings
+    this._initializeGameWorld({ roles, players, map: settings.map, mode: settings.mode });
+
+    // Start background music
+    audio.playBGM();
+
+    // Initialize remote players
+    for (const player of players) {
+      if (player.id !== this.playerId) {
+        this._createRemotePlayer(player.id, player.name, roles[player.id]);
+        
+        // Sync painted meshes if any
+        if (player.paintData) {
+          this._applyRemotePaint(player.id, player.paintData);
+        }
+      }
+    }
+
+    // Skip the 3 second role reveal and jump straight into current phase logic
+    if (this.role === 'seeker') {
+      if (this.phase === 'prep') {
+        this._showSeekerWaiting();
+      } else {
+        this._startHuntPhase(); // Seeker released
+      }
+    } else {
+      if (this.phase === 'prep') {
+        this._startPrepPhase();
+      } else {
+        this._startHuntPhase();
+      }
+    }
   }
 
   _onPhaseChanged(phase, timeRemaining) {
