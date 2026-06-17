@@ -221,7 +221,7 @@ export class LobbyUI {
   _updateStartButton() {
     if (!this.isHost) return;
     const readyCount = this._players.filter((p) => p.ready).length;
-    this.btnStartGame.disabled = readyCount < 2;
+    this.btnStartGame.disabled = readyCount === 0 || readyCount !== this._players.length;
   }
 
   /** Update the ready button label and style. */
