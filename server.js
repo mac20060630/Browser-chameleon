@@ -401,6 +401,9 @@ io.on('connection', (socket) => {
       roomCode: room.code,
       playerId: socket.id,
     });
+    
+    // Broadcast the initial player list to the room so the host sees themselves
+    broadcastPlayerList(room, io);
 
     console.log(`[room-created] ${room.code} by ${playerName}`);
   });
