@@ -119,8 +119,7 @@ export class PlayerController {
 
     // -- Pointer lock state ---------------------------------------------------
     this._onPointerLockChange = () => {
-      this.isPointerLocked = (document.pointerLockElement === this.camera.domElement ||
-                              document.pointerLockElement === document.body);
+      this.isPointerLocked = (document.pointerLockElement === document.body);
     };
 
     document.addEventListener('pointerlockchange', this._onPointerLockChange);
@@ -132,7 +131,7 @@ export class PlayerController {
    * @param {HTMLElement} [element] – defaults to document.body
    */
   requestPointerLock(element) {
-    const el = element || this.camera.domElement || document.body;
+    const el = element || document.body;
     el.requestPointerLock?.();
   }
 
@@ -151,7 +150,7 @@ export class PlayerController {
 
     // Sync character mesh to player position / yaw
     this.character.setPosition(this.position.x, this.position.y, this.position.z);
-    this.character.setRotation(this.rotation.yaw);
+    this.character.setRotation(this.rotation.yaw + Math.PI);
 
     // Update camera
     if (this.isThirdPerson) {
@@ -274,10 +273,13 @@ export class PlayerController {
 
     const headY = this.position.y + 1.0;
 
-    // Offset behind the character based on yaw
-    const camX = this.position.x + Math.sin(this.rotation.yaw) * this.thirdPersonDistance;
-    const camY = headY + this.thirdPersonHeight;
-    const camZ = this.position.z + Math.cos(this.rotation.yaw) * this.thirdPersonDistance;
+    // Offset behind the character based on yaw and pitch
+    const pitchOffset = Math.sin(this.rotation.pitch) * this.thirdPersonDistance;
+    const horizDist = Math.cos(this.rotation.pitch) * this.thirdPersonDistance;
+
+    const camX = this.position.x + Math.sin(this.rotation.yaw) * horizDist;
+    const camY = headY + this.thirdPersonHeight + pitchOffset;
+    const camZ = this.position.z + Math.cos(this.rotation.yaw) * horizDist;
 
     this.camera.position.set(camX, camY, camZ);
     this.camera.lookAt(this.position.x, headY, this.position.z);

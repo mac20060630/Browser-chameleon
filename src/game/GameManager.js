@@ -213,8 +213,18 @@ export class GameManager {
       }
     });
 
-    // Mouse click for tagging
+    // Mouse click for tagging and pointer lock
     document.addEventListener('mousedown', (e) => {
+      // Re-lock pointer on click if it was lost and we are in a playable phase
+      if (this.phase === PHASES.PREP || this.phase === PHASES.HUNT) {
+        if (!document.pointerLockElement && this.playerController) {
+          // Only lock if UI menus aren't open
+          if (!this.ui.paintTool.isVisible() && !this.ui.poseMenu.isVisible()) {
+            this.playerController.requestPointerLock();
+          }
+        }
+      }
+
       if (e.button === 0 && this.phase === PHASES.HUNT && this.role === 'seeker') {
         this.tagSystem?.tryTag();
       }

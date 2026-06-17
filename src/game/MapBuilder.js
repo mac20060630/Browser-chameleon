@@ -501,7 +501,7 @@ export class MapBuilder {
       new THREE.Vector3(-7, 0, -5),
       new THREE.Vector3(7, 0, -5),
       new THREE.Vector3(-3, 0, 6),
-      new THREE.Vector3(3, 0, -6),
+      new THREE.Vector3(3, 0, -5),
     ];
     this.spawnPoints.seeker = [
       new THREE.Vector3(0, 0, -D / 2 + 1.5), // near "door" (south wall)
