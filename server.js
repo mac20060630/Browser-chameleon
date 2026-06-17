@@ -121,6 +121,13 @@ function serializePlayers(playerMap) {
   return Array.from(playerMap.values()).map((p) => ({ ...p }));
 }
 
+/** Broadcast the current player list to the room. */
+function broadcastPlayerList(room, ioServer) {
+  ioServer.to(room.code).emit('player-list-update', {
+    players: Array.from(room.players.values()),
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Game Logic
 // ---------------------------------------------------------------------------
