@@ -54,7 +54,7 @@ export class PlayerController {
     this.rotation = { yaw: 0, pitch: 0 };
 
     /** Whether the camera is behind the character. */
-    this.isThirdPerson = false;
+    this.isThirdPerson = true;
 
     /** Distance behind the character in third-person mode. */
     this.thirdPersonDistance = 4;

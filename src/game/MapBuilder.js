@@ -59,7 +59,7 @@ const C = {
  * @returns {THREE.MeshStandardMaterial}
  */
 function mat(color, extra = {}) {
-  return new THREE.MeshStandardMaterial({ color, ...extra });
+  return new THREE.MeshStandardMaterial({ roughness: 0.7, metalness: 0.1, color, ...extra });
 }
 
 /**
@@ -457,17 +457,26 @@ export class MapBuilder {
     // Lighting
     // ===========================================================
 
-    // Ambient
-    const ambient = new THREE.AmbientLight(0xFFF5E6, 0.4);
+    // Hemisphere Light for soft, realistic ambient illumination
+    const ambient = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
     this.scene.add(ambient);
 
-    // Main point light (centre, with shadows)
-    const mainLight = new THREE.PointLight(0xFFFAF0, 1.0, 30);
-    mainLight.position.set(0, H - 0.5, 0);
+    // Main Directional Light (acts like a strong overhead/sun light for clean shadows)
+    const mainLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    mainLight.position.set(10, 20, 10); // positioned above and angled
     mainLight.castShadow = true;
-    mainLight.shadow.mapSize.set(1024, 1024);
+    mainLight.shadow.mapSize.set(2048, 2048);
     mainLight.shadow.camera.near = 0.1;
-    mainLight.shadow.camera.far = 25;
+    mainLight.shadow.camera.far = 50;
+    
+    // Fit the orthographic shadow camera tightly to the room dimensions
+    const d = 15;
+    mainLight.shadow.camera.left = -d;
+    mainLight.shadow.camera.right = d;
+    mainLight.shadow.camera.top = d;
+    mainLight.shadow.camera.bottom = -d;
+    mainLight.shadow.bias = -0.0005; // Fix shadow acne
+
     this.scene.add(mainLight);
 
     // Accent coloured lights
@@ -531,18 +540,32 @@ export class MapBuilder {
     this._createBox(0.5, 4, 15, mat(0xE0E0E0), { x: -9.75, y: 2, z: 0 }, true); // West
 
     // 3. LIGHTING (Fluorescent style)
-    const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+    const ambient = new THREE.HemisphereLight(0xffffff, 0x555555, 0.7);
     this.scene.add(ambient);
 
-    // Grid of overhead lights
+    // Main Directional Light for shadows
+    const mainLight = new THREE.DirectionalLight(0xffffff, 1.0);
+    mainLight.position.set(5, 20, 5);
+    mainLight.castShadow = true;
+    mainLight.shadow.mapSize.set(2048, 2048);
+    mainLight.shadow.camera.near = 0.5;
+    mainLight.shadow.camera.far = 50;
+    const d = 15;
+    mainLight.shadow.camera.left = -d;
+    mainLight.shadow.camera.right = d;
+    mainLight.shadow.camera.top = d;
+    mainLight.shadow.camera.bottom = -d;
+    mainLight.shadow.bias = -0.0005;
+    this.scene.add(mainLight);
+
+    // Grid of overhead lights (fill lights without shadows to save performance)
     const positions = [
       { x: -5, z: -4 }, { x: 5, z: -4 },
       { x: -5, z: 4 }, { x: 5, z: 4 }
     ];
     positions.forEach(pos => {
-      const light = new THREE.PointLight(0xffffff, 0.5, 10);
+      const light = new THREE.PointLight(0xffffff, 0.3, 10);
       light.position.set(pos.x, 3.8, pos.z);
-      light.castShadow = true;
       this.scene.add(light);
     });
 
