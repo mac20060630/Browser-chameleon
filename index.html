@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Meccha Chameleon — A multiplayer hide-and-seek game where you paint yourself to blend in!" />
+  <title>Meccha Chameleon — Hide &amp; Seek</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/src/styles/index.css" />
+</head>
+<body>
+  <!-- Three.js Canvas -->
+  <div id="game-canvas-container">
+    <canvas id="game-canvas"></canvas>
+  </div>
+
+  <!-- Crosshair -->
+  <div id="crosshair" class="hidden">+</div>
+
+  <!-- ==================== LOBBY SCREEN ==================== -->
+  <div id="lobby-screen" class="screen">
+    <div class="lobby-container">
+      <div class="lobby-logo">
+        <h1 class="game-title">
+          <span class="title-m">M</span><span class="title-e">E</span><span class="title-c1">C</span><span class="title-c2">C</span><span class="title-h">H</span><span class="title-a">A</span>
+        </h1>
+        <h2 class="game-subtitle">CHAMELEON</h2>
+        <p class="game-tagline">Paint. Hide. Survive.</p>
+      </div>
+
+      <div class="lobby-panels">
+        <!-- Create Room Panel -->
+        <div class="lobby-panel glass-panel" id="create-panel">
+          <h3>🎨 Create Room</h3>
+          <div class="form-group">
+            <label for="player-name-create">Your Name</label>
+            <input type="text" id="player-name-create" placeholder="Enter name..." maxlength="16" />
+          </div>
+          <div class="form-group">
+            <label for="map-select">Map</label>
+            <select id="map-select">
+              <option value="party-room">🎈 Party Room</option>
+              <option value="office">🏢 Office</option>
+              <option value="kitchen" disabled>🍳 Kitchen (Coming Soon)</option>
+              <option value="gallery" disabled>🖼️ Art Gallery (Coming Soon)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="mode-select">Mode</label>
+            <select id="mode-select">
+              <option value="normal">Normal — Tag & Eliminate</option>
+              <option value="increasing-oni">Increasing Oni — Convert on Tag</option>
+              <option value="double">Double — Hide Then Seek</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <div class="form-group half">
+              <label for="prep-time">Prep Time</label>
+              <select id="prep-time">
+                <option value="60">60s</option>
+                <option value="90" selected>90s</option>
+                <option value="120">120s</option>
+              </select>
+            </div>
+            <div class="form-group half">
+              <label for="hunt-time">Hunt Time</label>
+              <select id="hunt-time">
+                <option value="180">3 min</option>
+                <option value="240">4 min</option>
+                <option value="300" selected>5 min</option>
+              </select>
+            </div>
+          </div>
+          <button id="btn-create-room" class="btn-primary">Create Room</button>
+        </div>
+
+        <!-- Join Room Panel -->
+        <div class="lobby-panel glass-panel" id="join-panel">
+          <h3>🔑 Join Room</h3>
+          <div class="form-group">
+            <label for="player-name-join">Your Name</label>
+            <input type="text" id="player-name-join" placeholder="Enter name..." maxlength="16" />
+          </div>
+          <div class="form-group">
+            <label for="room-code-input">Room Code</label>
+            <input type="text" id="room-code-input" placeholder="Enter code..." maxlength="6" style="text-transform: uppercase;" />
+          </div>
+          <button id="btn-join-room" class="btn-primary">Join Room</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== WAITING ROOM ==================== -->
+  <div id="waiting-room-screen" class="screen hidden">
+    <div class="waiting-container glass-panel">
+      <h2>Room: <span id="room-code-display" class="room-code"></span></h2>
+      <p class="room-info">Share this code with friends!</p>
+
+      <div id="player-list" class="player-list">
+        <!-- Players populate here -->
+      </div>
+
+      <div class="waiting-actions">
+        <button id="btn-ready" class="btn-secondary">Ready Up</button>
+        <button id="btn-start-game" class="btn-primary hidden">Start Game</button>
+        <button id="btn-leave-room" class="btn-danger">Leave</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== ROLE REVEAL ==================== -->
+  <div id="role-reveal-screen" class="screen hidden">
+    <div class="role-reveal-container">
+      <h2 id="role-reveal-text" class="role-reveal-text"></h2>
+      <p id="role-reveal-desc" class="role-reveal-desc"></p>
+    </div>
+  </div>
+
+  <!-- ==================== SEEKER WAITING ==================== -->
+  <div id="seeker-waiting-screen" class="screen hidden">
+    <div class="seeker-wait-container">
+      <div class="seeker-wait-icon">🔦</div>
+      <h2>Hiders are preparing...</h2>
+      <div id="seeker-wait-timer" class="big-timer"></div>
+      <p class="seeker-wait-tip">Get ready to hunt!</p>
+    </div>
+  </div>
+
+  <!-- ==================== IN-GAME HUD ==================== -->
+  <div id="game-hud" class="hidden">
+    <!-- Top Bar -->
+    <div id="hud-top-bar" class="hud-top-bar">
+      <div id="hud-phase" class="hud-phase">PREPARATION</div>
+      <div id="hud-timer" class="hud-timer">90</div>
+      <div id="hud-alive" class="hud-alive">
+        <span id="hud-alive-icon">👤</span>
+        <span id="hud-alive-count">0 / 0</span>
+      </div>
+    </div>
+
+    <!-- Role Indicator -->
+    <div id="hud-role" class="hud-role">HIDER</div>
+
+    <!-- Controls Hint (bottom) -->
+    <div id="hud-controls" class="hud-controls">
+      <span class="control-hint"><kbd>WASD</kbd> Move</span>
+      <span class="control-hint"><kbd>F</kbd> Paint Tool</span>
+      <span class="control-hint"><kbd>Q</kbd> Pose Menu</span>
+      <span class="control-hint"><kbd>V</kbd> Camera</span>
+      <span class="control-hint"><kbd>Enter</kbd> Lock Pose</span>
+    </div>
+
+    <!-- Tag Prompt (seeker only) -->
+    <div id="tag-prompt" class="tag-prompt hidden">
+      <span class="tag-prompt-text">Press <kbd>E</kbd> to Tag!</span>
+    </div>
+  </div>
+
+  <!-- ==================== PAINT TOOL PANEL ==================== -->
+  <div id="paint-tool-panel" class="paint-panel glass-panel hidden">
+    <div class="paint-panel-header">
+      <h3>🎨 Paint Tool</h3>
+      <button id="btn-close-paint" class="btn-icon">✕</button>
+    </div>
+
+    <!-- Color Preview -->
+    <div class="paint-section">
+      <div id="color-preview" class="color-preview"></div>
+    </div>
+
+    <!-- HSV Sliders -->
+    <div class="paint-section">
+      <label>Hue</label>
+      <div class="slider-row">
+        <input type="range" id="hue-slider" class="hue-slider" min="0" max="360" value="0" />
+        <span id="hue-value" class="slider-val">0°</span>
+      </div>
+      <label>Saturation</label>
+      <div class="slider-row">
+        <input type="range" id="sat-slider" class="sat-slider" min="0" max="100" value="100" />
+        <span id="sat-value" class="slider-val">100%</span>
+      </div>
+      <label>Brightness</label>
+      <div class="slider-row">
+        <input type="range" id="val-slider" class="val-slider" min="0" max="100" value="100" />
+        <span id="val-value" class="slider-val">100%</span>
+      </div>
+    </div>
+
+    <!-- Brush Size -->
+    <div class="paint-section">
+      <label>Brush Size</label>
+      <div class="slider-row">
+        <input type="range" id="brush-size-slider" min="2" max="60" value="15" />
+        <span id="brush-size-value" class="slider-val">15</span>
+      </div>
+    </div>
+
+    <!-- Material Properties -->
+    <div class="paint-section">
+      <label>Metallic</label>
+      <div class="slider-row">
+        <input type="range" id="metallic-slider" min="0" max="100" value="0" />
+        <span id="metallic-value" class="slider-val">0%</span>
+      </div>
+      <label>Roughness</label>
+      <div class="slider-row">
+        <input type="range" id="roughness-slider" min="0" max="100" value="80" />
+        <span id="roughness-value" class="slider-val">80%</span>
+      </div>
+    </div>
+
+    <!-- Tool Buttons -->
+    <div class="paint-section paint-tools-row">
+      <button id="btn-eyedropper" class="btn-tool" title="Eyedropper (E)">💧</button>
+      <button id="btn-fill" class="btn-tool" title="Fill All">🪣</button>
+      <button id="btn-undo" class="btn-tool" title="Undo">↩️</button>
+      <button id="btn-redo" class="btn-tool" title="Redo">↪️</button>
+    </div>
+
+    <!-- Pattern Stamps -->
+    <div class="paint-section">
+      <label>Patterns</label>
+      <div class="pattern-grid">
+        <button class="btn-pattern" data-pattern="solid" title="Solid">⬛</button>
+        <button class="btn-pattern" data-pattern="checkers" title="Checkers">🏁</button>
+        <button class="btn-pattern" data-pattern="stripes-h" title="H-Stripes">☰</button>
+        <button class="btn-pattern" data-pattern="stripes-v" title="V-Stripes">▐</button>
+        <button class="btn-pattern" data-pattern="gradient" title="Gradient">🌅</button>
+        <button class="btn-pattern" data-pattern="dots" title="Dots">⚬</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== POSE MENU ==================== -->
+  <div id="pose-menu" class="pose-menu hidden">
+    <div class="pose-menu-inner glass-panel">
+      <h3>🧍 Select Pose</h3>
+      <div class="pose-grid" id="pose-grid">
+        <!-- Pose buttons generated by JS -->
+      </div>
+      <div class="pose-actions">
+        <button id="btn-lock-pose" class="btn-primary" disabled>Lock Pose (Enter)</button>
+        <button id="btn-close-pose" class="btn-secondary">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== RESULTS SCREEN ==================== -->
+  <div id="results-screen" class="screen hidden">
+    <div class="results-container">
+      <h2 class="results-title" id="results-title">Round Over!</h2>
+      <p class="results-subtitle" id="results-subtitle"></p>
+
+      <div class="results-content">
+        <div class="scoreboard glass-panel" id="scoreboard">
+          <h3>📊 Scoreboard</h3>
+          <table id="score-table">
+            <thead>
+              <tr><th>Player</th><th>Role</th><th>Status</th><th>Score</th></tr>
+            </thead>
+            <tbody id="score-body">
+            </tbody>
+          </table>
+        </div>
+
+        <div class="results-stats glass-panel" id="results-stats">
+          <h3>🏆 Highlights</h3>
+          <div id="highlights-list"></div>
+        </div>
+      </div>
+
+      <div class="results-actions">
+        <button id="btn-play-again" class="btn-primary">Play Again</button>
+        <button id="btn-back-lobby" class="btn-secondary">Back to Lobby</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== NOTIFICATION TOAST ==================== -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
