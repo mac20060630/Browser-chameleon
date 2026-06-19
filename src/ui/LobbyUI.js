@@ -44,6 +44,7 @@ export class LobbyUI {
     this.btnReady = document.getElementById('btn-ready');
     this.btnStartGame = document.getElementById('btn-start-game');
     this.btnLeaveRoom = document.getElementById('btn-leave-room');
+    this.btnCopyCode = document.getElementById('btn-copy-code');
   }
 
   _bindEvents() {
@@ -53,8 +54,27 @@ export class LobbyUI {
     this.btnStartGame.addEventListener('click', () => this.onStartGame());
     this.btnLeaveRoom.addEventListener('click', () => this.onLeave());
 
+    // Copy room code to clipboard
+    this.btnCopyCode?.addEventListener('click', () => {
+      const code = this.roomCodeDisplay?.textContent;
+      if (code) {
+        navigator.clipboard.writeText(code).then(() => {
+          this.btnCopyCode.textContent = '✅';
+          setTimeout(() => { this.btnCopyCode.textContent = '📋'; }, 1500);
+        });
+      }
+    });
+
     // Allow Enter key in room code field to trigger join
     this.roomCodeInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') this.onJoinRoom();
+    });
+
+    // Allow Enter key in name fields
+    this.playerNameCreate.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') this.onCreateRoom();
+    });
+    this.playerNameJoin.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') this.onJoinRoom();
     });
   }
@@ -128,6 +148,12 @@ export class LobbyUI {
     }
 
     this._updateStartButton();
+
+    // Also show player count in waiting room title
+    const h2 = this.waitingScreen?.querySelector('h2');
+    if (h2 && this.roomCodeDisplay?.textContent) {
+      // Already rendered by showWaitingRoom
+    }
   }
 
   /**

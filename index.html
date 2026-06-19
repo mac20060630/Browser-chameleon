@@ -7,7 +7,7 @@
   <title>Browser Chameleon — Hide &amp; Seek</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=M+PLUS+Rounded+1c:wght@400;700;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/src/styles/index.css" />
 </head>
 <body>
@@ -17,7 +17,11 @@
   </div>
 
   <!-- Crosshair -->
-  <div id="crosshair" class="hidden">+</div>
+  <div id="crosshair" class="hidden">
+    <div class="crosshair-line h"></div>
+    <div class="crosshair-line v"></div>
+    <div class="crosshair-dot"></div>
+  </div>
 
   <!-- ==================== LOBBY SCREEN ==================== -->
   <div id="lobby-screen" class="screen">
@@ -28,6 +32,14 @@
         </h1>
         <h2 class="game-subtitle">CHAMELEON</h2>
         <p class="game-tagline">Paint. Hide. Survive.</p>
+
+        <!-- Paint blobs decoration -->
+        <div class="lobby-paint-blobs">
+          <div class="blob blob-1"></div>
+          <div class="blob blob-2"></div>
+          <div class="blob blob-3"></div>
+          <div class="blob blob-4"></div>
+        </div>
       </div>
 
       <div class="lobby-panels">
@@ -36,21 +48,22 @@
           <h3>🎨 Create Room</h3>
           <div class="form-group">
             <label for="player-name-create">Your Name</label>
-            <input type="text" id="player-name-create" placeholder="Enter name..." maxlength="16" />
+            <input type="text" id="player-name-create" placeholder="Enter name..." maxlength="16" autocomplete="off" />
           </div>
           <div class="form-group">
             <label for="map-select">Map</label>
             <select id="map-select">
               <option value="party-room">🎈 Party Room</option>
+              <option value="haunted-mansion">🏚️ Haunted Mansion</option>
+              <option value="farmhouse">🐄 Farmhouse</option>
+              <option value="ballroom">🎹 Grand Ballroom</option>
               <option value="office">🏢 Office</option>
-              <option value="kitchen" disabled>🍳 Kitchen (Coming Soon)</option>
-              <option value="gallery" disabled>🖼️ Art Gallery (Coming Soon)</option>
             </select>
           </div>
           <div class="form-group">
             <label for="mode-select">Mode</label>
             <select id="mode-select">
-              <option value="normal">Normal — Tag & Eliminate</option>
+              <option value="normal">Normal — Tag &amp; Eliminate</option>
               <option value="increasing-oni">Increasing Oni — Convert on Tag</option>
               <option value="double">Double — Hide Then Seek</option>
             </select>
@@ -62,11 +75,13 @@
                 <option value="60">60s</option>
                 <option value="90" selected>90s</option>
                 <option value="120">120s</option>
+                <option value="180">3 min</option>
               </select>
             </div>
             <div class="form-group half">
               <label for="hunt-time">Hunt Time</label>
               <select id="hunt-time">
+                <option value="120">2 min</option>
                 <option value="180">3 min</option>
                 <option value="240">4 min</option>
                 <option value="300" selected>5 min</option>
@@ -81,14 +96,32 @@
           <h3>🔑 Join Room</h3>
           <div class="form-group">
             <label for="player-name-join">Your Name</label>
-            <input type="text" id="player-name-join" placeholder="Enter name..." maxlength="16" />
+            <input type="text" id="player-name-join" placeholder="Enter name..." maxlength="16" autocomplete="off" />
           </div>
           <div class="form-group">
             <label for="room-code-input">Room Code</label>
-            <input type="text" id="room-code-input" placeholder="Enter code..." maxlength="6" style="text-transform: uppercase;" />
+            <input type="text" id="room-code-input" placeholder="Enter code..." maxlength="6" style="text-transform: uppercase;" autocomplete="off" />
           </div>
           <button id="btn-join-room" class="btn-primary">Join Room</button>
+
+          <!-- Map previews -->
+          <div class="map-previews">
+            <div class="map-preview active" data-map="party-room" title="Party Room">🎈</div>
+            <div class="map-preview" data-map="haunted-mansion" title="Haunted Mansion">🏚️</div>
+            <div class="map-preview" data-map="farmhouse" title="Farmhouse">🐄</div>
+            <div class="map-preview" data-map="ballroom" title="Grand Ballroom">🎹</div>
+            <div class="map-preview" data-map="office" title="Office">🏢</div>
+          </div>
         </div>
+      </div>
+
+      <!-- Bottom info -->
+      <div class="lobby-footer">
+        <span>🦎 Up to 10 players per room</span>
+        <span>•</span>
+        <span>🎨 Paint yourself to blend in</span>
+        <span>•</span>
+        <span>🔦 Can you find all the hiders?</span>
       </div>
     </div>
   </div>
@@ -96,7 +129,10 @@
   <!-- ==================== WAITING ROOM ==================== -->
   <div id="waiting-room-screen" class="screen hidden">
     <div class="waiting-container glass-panel">
-      <h2>Room: <span id="room-code-display" class="room-code"></span></h2>
+      <div class="waiting-header">
+        <h2>Room: <span id="room-code-display" class="room-code"></span></h2>
+        <button id="btn-copy-code" class="btn-icon" title="Copy code">📋</button>
+      </div>
       <p class="room-info">Share this code with friends!</p>
 
       <div id="player-list" class="player-list">
@@ -114,44 +150,93 @@
   <!-- ==================== ROLE REVEAL ==================== -->
   <div id="role-reveal-screen" class="screen hidden">
     <div class="role-reveal-container">
+      <div class="role-reveal-icon" id="role-reveal-icon">🎨</div>
       <h2 id="role-reveal-text" class="role-reveal-text"></h2>
       <p id="role-reveal-desc" class="role-reveal-desc"></p>
+      <div class="role-reveal-countdown" id="role-reveal-countdown"></div>
     </div>
   </div>
 
   <!-- ==================== SEEKER WAITING ==================== -->
   <div id="seeker-waiting-screen" class="screen hidden">
     <div class="seeker-wait-container">
-      <div class="seeker-wait-icon">🔦</div>
+      <div class="seeker-wait-icon">⏳</div>
       <h2>Hiders are preparing...</h2>
       <div id="seeker-wait-timer" class="big-timer"></div>
-      <p class="seeker-wait-tip">Get ready to hunt!</p>
+      <p class="seeker-wait-tip">Get ready to hunt them down! 🔦</p>
+      <div class="seeker-wait-bar">
+        <div class="seeker-wait-fill" id="seeker-wait-fill"></div>
+      </div>
     </div>
   </div>
 
   <!-- ==================== IN-GAME HUD ==================== -->
   <div id="game-hud" class="hidden">
-    <!-- Top Bar -->
+
+    <!-- Top Bar — matches screenshot layout -->
     <div id="hud-top-bar" class="hud-top-bar">
-      <div id="hud-phase" class="hud-phase">PREPARATION</div>
-      <div id="hud-timer" class="hud-timer">90</div>
-      <div id="hud-alive" class="hud-alive">
-        <span id="hud-alive-icon">👤</span>
-        <span id="hud-alive-count">0 / 0</span>
+      <!-- Hider life icons (left) -->
+      <div id="hud-lives" class="hud-lives">
+        <!-- Filled by JS -->
+      </div>
+
+      <!-- Center: Timer with hourglass -->
+      <div class="hud-center">
+        <div id="hud-phase-badge" class="hud-phase-badge">PREP</div>
+        <div class="hud-timer-block">
+          <span class="hud-timer-icon">⏳</span>
+          <span id="hud-timer" class="hud-timer">90</span>
+        </div>
+        <div class="hud-timer-label" id="hud-timer-label">準備時間</div>
+      </div>
+
+      <!-- Seeker icons (right) -->
+      <div id="hud-seekers" class="hud-seekers">
+        <!-- Filled by JS -->
       </div>
     </div>
 
-    <!-- Role Indicator -->
+    <!-- Role badge (top left) -->
     <div id="hud-role" class="hud-role">HIDER</div>
 
-    <!-- Controls Hint (bottom) -->
-    <div id="hud-controls" class="hud-controls">
-      <span class="control-hint"><kbd>WASD</kbd> Move</span>
-      <span class="control-hint"><kbd>F</kbd> Paint Tool</span>
-      <span class="control-hint"><kbd>Q</kbd> Pose Menu</span>
-      <span class="control-hint"><kbd>V</kbd> Camera</span>
-      <span class="control-hint"><kbd>Enter</kbd> Lock Pose</span>
+    <!-- Right sidebar — paint / camera mode buttons (matching screenshot) -->
+    <div id="hud-sidebar" class="hud-sidebar hidden">
+      <div class="sidebar-btn" id="sidebar-chat" title="Chat (T)">
+        <span class="sidebar-icon">💬</span>
+        <span class="sidebar-key">T</span>
+      </div>
+      <div class="sidebar-btn sidebar-active" id="sidebar-paintmode" title="Paint Mode (F)">
+        <span class="sidebar-icon">🎨</span>
+        <span class="sidebar-key">F</span>
+      </div>
+      <div class="sidebar-btn" id="sidebar-camera" title="Camera (V)">
+        <span class="sidebar-icon">📷</span>
+        <span class="sidebar-key">V</span>
+      </div>
+      <div class="sidebar-btn sidebar-danger" id="sidebar-posemode" title="Pose Menu (Q)">
+        <span class="sidebar-icon">🧍</span>
+        <span class="sidebar-key">Q</span>
+      </div>
     </div>
+
+    <!-- Bottom-left: ammo / paint bars -->
+    <div id="hud-ammo" class="hud-ammo hidden">
+      <div class="ammo-bar" id="ammo-bar-1">
+        <div class="ammo-fill" style="background:#00E5FF;"></div>
+      </div>
+      <div class="ammo-bar" id="ammo-bar-2">
+        <div class="ammo-fill" style="background:#00C853;"></div>
+      </div>
+    </div>
+
+    <!-- Bottom-right: remaining hiders count (残り人数) -->
+    <div id="hud-remaining" class="hud-remaining hidden">
+      <span class="remaining-label">残り人数</span>
+      <span id="hud-remaining-count" class="remaining-count">10</span>
+    </div>
+
+    <!-- Controls Hint (bottom center) -->
+    <div id="hud-controls" class="hud-controls"></div>
 
     <!-- Tag Prompt (seeker only) -->
     <div id="tag-prompt" class="tag-prompt hidden">
@@ -166,7 +251,7 @@
       <button id="btn-close-paint" class="btn-icon">✕</button>
     </div>
 
-    <!-- Color Preview -->
+    <!-- Color preview -->
     <div class="paint-section">
       <div id="color-preview" class="color-preview"></div>
     </div>
@@ -225,12 +310,31 @@
     <div class="paint-section">
       <label>Patterns</label>
       <div class="pattern-grid">
-        <button class="btn-pattern" data-pattern="solid" title="Solid">⬛</button>
+        <button class="btn-pattern active" data-pattern="solid" title="Solid">⬛</button>
         <button class="btn-pattern" data-pattern="checkers" title="Checkers">🏁</button>
         <button class="btn-pattern" data-pattern="stripes-h" title="H-Stripes">☰</button>
         <button class="btn-pattern" data-pattern="stripes-v" title="V-Stripes">▐</button>
         <button class="btn-pattern" data-pattern="gradient" title="Gradient">🌅</button>
         <button class="btn-pattern" data-pattern="dots" title="Dots">⚬</button>
+      </div>
+    </div>
+
+    <!-- Color presets -->
+    <div class="paint-section">
+      <label>Quick Colors</label>
+      <div class="color-presets">
+        <button class="color-preset" style="background:#ff2222" data-color="255,34,34"></button>
+        <button class="color-preset" style="background:#ff8800" data-color="255,136,0"></button>
+        <button class="color-preset" style="background:#ffdd00" data-color="255,221,0"></button>
+        <button class="color-preset" style="background:#22cc44" data-color="34,204,68"></button>
+        <button class="color-preset" style="background:#2288ff" data-color="34,136,255"></button>
+        <button class="color-preset" style="background:#9922ff" data-color="153,34,255"></button>
+        <button class="color-preset" style="background:#ff22aa" data-color="255,34,170"></button>
+        <button class="color-preset" style="background:#ffffff" data-color="255,255,255"></button>
+        <button class="color-preset" style="background:#888888" data-color="136,136,136"></button>
+        <button class="color-preset" style="background:#000000" data-color="0,0,0"></button>
+        <button class="color-preset" style="background:#1B3320" data-color="27,51,32"></button>
+        <button class="color-preset" style="background:#3DBDBD" data-color="61,189,189"></button>
       </div>
     </div>
   </div>
@@ -282,6 +386,15 @@
 
   <!-- ==================== NOTIFICATION TOAST ==================== -->
   <div id="toast-container" class="toast-container"></div>
+
+  <!-- ==================== POINTER LOCK PROMPT ==================== -->
+  <div id="pointer-lock-prompt" class="pointer-lock-prompt hidden">
+    <div class="plp-inner">
+      <div class="plp-icon">🖱️</div>
+      <p>Click to capture mouse &amp; play</p>
+      <p class="plp-sub">Press <kbd>Escape</kbd> to release</p>
+    </div>
+  </div>
 
   <script type="module" src="/src/main.js"></script>
 </body>

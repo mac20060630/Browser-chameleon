@@ -60,6 +60,9 @@ export class PaintToolUI {
 
     // Pattern buttons
     this.patternButtons = document.querySelectorAll('.btn-pattern');
+
+    // Color preset swatches
+    this.colorPresetButtons = document.querySelectorAll('.color-preset');
   }
 
   _bindEvents() {
@@ -101,6 +104,14 @@ export class PaintToolUI {
       btn.addEventListener('click', () =>
         this._onPattern(btn.dataset.pattern),
       );
+    });
+
+    // Color preset swatches
+    this.colorPresetButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const [r, g, b] = btn.dataset.color.split(',').map(Number);
+        this._setColorFromRGB(r, g, b);
+      });
     });
   }
 
@@ -205,6 +216,33 @@ export class PaintToolUI {
   // ───────────────────────── Eyedropper Sync ────────────────────────────
 
   /**
+   * Internal: set color from an RGB triple, update all UI controls.
+   * @param {number} r 0-255
+   * @param {number} g 0-255
+   * @param {number} b 0-255
+   */
+  _setColorFromRGB(r, g, b) {
+    const { h, s, v } = rgbToHsv(r, g, b);
+
+    this.hue = Math.round(h);
+    this.saturation = Math.round(s * 100);
+    this.value = Math.round(v * 100);
+
+    if (this.hueSlider) { this.hueSlider.value = this.hue; this.hueValue.textContent = `${this.hue}°`; }
+    if (this.satSlider) { this.satSlider.value = this.saturation; this.satValue.textContent = `${this.saturation}%`; }
+    if (this.valSlider) { this.valSlider.value = this.value; this.valValue.textContent = `${this.value}%`; }
+
+    this._updatePreview();
+    this._updatePaintSystem();
+
+    // Mark selected preset
+    this.colorPresetButtons?.forEach((btn) => {
+      const [pr, pg, pb] = btn.dataset.color?.split(',').map(Number) || [];
+      btn.classList.toggle('selected', pr === r && pg === g && pb === b);
+    });
+  }
+
+  /**
    * Called externally when the eyedropper picks a colour.
    * Updates all HSV sliders and the preview to match.
    * @param {number} r 0-255
@@ -212,24 +250,7 @@ export class PaintToolUI {
    * @param {number} b 0-255
    */
   setColorFromEyedropper(r, g, b) {
-    const { h, s, v } = rgbToHsv(r, g, b);
-
-    this.hue = Math.round(h);
-    this.saturation = Math.round(s * 100);
-    this.value = Math.round(v * 100);
-
-    // Sync slider positions
-    this.hueSlider.value = this.hue;
-    this.hueValue.textContent = `${this.hue}°`;
-
-    this.satSlider.value = this.saturation;
-    this.satValue.textContent = `${this.saturation}%`;
-
-    this.valSlider.value = this.value;
-    this.valValue.textContent = `${this.value}%`;
-
-    this._updatePreview();
-    this._updatePaintSystem();
+    this._setColorFromRGB(r, g, b);
     this._deactivateEyedropper();
   }
 

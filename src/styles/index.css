@@ -101,12 +101,36 @@ html, body {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-size: 24px;
-  color: rgba(255, 255, 255, 0.6);
+  width: 24px;
+  height: 24px;
   pointer-events: none;
   z-index: 100;
-  text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
-  font-weight: 300;
+}
+
+.crosshair-line {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 2px;
+  box-shadow: 0 0 4px rgba(0,0,0,0.6);
+}
+.crosshair-line.h {
+  width: 16px; height: 2px;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+}
+.crosshair-line.v {
+  width: 2px; height: 16px;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+}
+.crosshair-dot {
+  position: absolute;
+  width: 4px; height: 4px;
+  background: rgba(255,255,255,0.9);
+  border-radius: 50%;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 6px rgba(255,255,255,0.5);
 }
 
 /* ---------- Screen Containers ---------- */
@@ -534,7 +558,7 @@ select option {
 }
 
 /* ============================================================
-   IN-GAME HUD
+   IN-GAME HUD — matches screenshot layout
    ============================================================ */
 #game-hud {
   position: fixed;
@@ -543,86 +567,263 @@ select option {
   pointer-events: none;
 }
 
+/* ---- Top bar ---- */
 .hud-top-bar {
   position: absolute;
-  top: 16px;
+  top: 12px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
   align-items: center;
-  gap: var(--space-lg);
-  padding: 8px 24px;
-  background: rgba(10, 10, 26, 0.7);
-  backdrop-filter: blur(12px);
-  border: 1px solid var(--border-glass);
-  border-radius: var(--radius-full);
-  pointer-events: auto;
+  gap: 12px;
+  padding: 8px 20px;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 40px;
+  min-width: 340px;
+  justify-content: space-between;
 }
 
-.hud-phase {
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: var(--accent-secondary);
-  padding: 4px 12px;
-  background: rgba(6, 182, 212, 0.12);
-  border-radius: var(--radius-full);
+/* Hider life icons */
+.hud-lives {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
-.hud-timer {
-  font-size: 1.8rem;
+.life-icon {
+  width: 24px;
+  height: 28px;
+  position: relative;
+}
+.life-icon::before {
+  content: '🧍';
+  font-size: 20px;
+  line-height: 1;
+  filter: brightness(1.4) saturate(0) brightness(5);
+  opacity: 0.9;
+}
+.life-icon.dead::before {
+  filter: brightness(0.3) saturate(0);
+  opacity: 0.35;
+}
+
+/* Center block */
+.hud-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+}
+
+.hud-phase-badge {
+  font-size: 0.6rem;
   font-weight: 800;
-  font-family: var(--font-mono);
-  color: var(--text-primary);
-  min-width: 60px;
-  text-align: center;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  padding: 2px 12px;
+  border-radius: 99px;
+  background: rgba(0, 229, 255, 0.18);
+  color: #00E5FF;
+  border: 1px solid rgba(0, 229, 255, 0.3);
 }
 
-.hud-timer.warning {
-  color: var(--accent-warning);
-  animation: timerPulse 1s ease-in-out infinite;
+.hud-phase-badge.hunt {
+  background: rgba(255, 23, 68, 0.18);
+  color: #FF1744;
+  border-color: rgba(255, 23, 68, 0.3);
 }
 
-.hud-timer.critical {
-  color: var(--accent-danger);
-  animation: timerPulse 0.5s ease-in-out infinite;
-}
-
-.hud-alive {
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: var(--text-secondary);
+.hud-timer-block {
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
+.hud-timer-icon {
+  font-size: 1.1rem;
+}
+
+.hud-timer {
+  font-size: 2rem;
+  font-weight: 900;
+  font-family: 'M PLUS Rounded 1c', 'Outfit', sans-serif;
+  color: #fff;
+  text-shadow: 0 0 12px rgba(255,255,255,0.3);
+  min-width: 60px;
+  text-align: center;
+  line-height: 1;
+}
+
+.hud-timer.warning {
+  color: #FFD54F;
+  text-shadow: 0 0 14px rgba(255,213,79,0.5);
+  animation: timerPulse 1s ease-in-out infinite;
+}
+
+.hud-timer.critical {
+  color: #FF1744;
+  text-shadow: 0 0 16px rgba(255,23,68,0.6);
+  animation: timerPulse 0.5s ease-in-out infinite;
+}
+
+.hud-timer-label {
+  font-size: 0.6rem;
+  color: rgba(255,255,255,0.5);
+  letter-spacing: 0.1em;
+}
+
+/* Seeker icons */
+.hud-seekers {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.seeker-icon {
+  font-size: 18px;
+  filter: hue-rotate(0deg) saturate(2);
+}
+
+/* Role badge — top left */
 .hud-role {
   position: absolute;
   top: 70px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 0.8rem;
-  font-weight: 600;
+  left: 16px;
+  font-size: 0.7rem;
+  font-weight: 700;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  padding: 4px 16px;
+  padding: 5px 14px;
   border-radius: var(--radius-full);
-  background: rgba(124, 58, 237, 0.15);
-  border: 1px solid rgba(124, 58, 237, 0.3);
-  color: var(--accent-primary);
+  background: rgba(124, 58, 237, 0.2);
+  border: 1px solid rgba(124, 58, 237, 0.4);
+  color: #A78BFA;
+  backdrop-filter: blur(8px);
 }
 
 .hud-role.seeker {
-  background: rgba(239, 68, 68, 0.15);
-  border-color: rgba(239, 68, 68, 0.3);
-  color: var(--accent-danger);
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #FC8181;
 }
 
+/* ---- Right sidebar (F/V/Q buttons) ---- */
+.hud-sidebar {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+.sidebar-btn {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  background: rgba(0,0,0,0.6);
+  border: 1px solid rgba(255,255,255,0.12);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  backdrop-filter: blur(8px);
+}
+
+.sidebar-btn:hover {
+  background: rgba(255,255,255,0.12);
+  border-color: rgba(255,255,255,0.3);
+  transform: scale(1.05);
+}
+
+.sidebar-btn.sidebar-active {
+  background: rgba(0,229,255,0.15);
+  border-color: rgba(0,229,255,0.5);
+}
+
+.sidebar-btn.sidebar-danger {
+  background: rgba(255,23,68,0.12);
+  border-color: rgba(255,23,68,0.3);
+}
+
+.sidebar-icon { font-size: 1.3rem; line-height: 1; }
+.sidebar-key {
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: rgba(255,255,255,0.5);
+  text-transform: uppercase;
+}
+
+/* ---- Ammo bars (bottom-left) ---- */
+.hud-ammo {
+  position: absolute;
+  bottom: 24px;
+  left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ammo-bar {
+  width: 120px;
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.1);
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.ammo-fill {
+  height: 100%;
+  width: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+/* ---- Remaining count (bottom-right) ---- */
+.hud-remaining {
+  position: absolute;
+  bottom: 24px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: rgba(0,0,0,0.65);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  padding: 8px 14px;
+}
+
+.remaining-label {
+  font-size: 0.6rem;
+  color: rgba(255,255,255,0.5);
+  letter-spacing: 0.1em;
+  font-family: 'M PLUS Rounded 1c', sans-serif;
+}
+
+.remaining-count {
+  font-size: 2rem;
+  font-weight: 900;
+  color: #fff;
+  font-family: 'M PLUS Rounded 1c', 'Outfit', sans-serif;
+  line-height: 1;
+}
+
+/* ---- Controls bar (bottom center) ---- */
 .hud-controls {
   position: absolute;
-  bottom: 20px;
+  bottom: 16px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -646,18 +847,20 @@ select option {
 kbd {
   display: inline-block;
   padding: 2px 6px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 4px;
-  font-family: var(--font-mono);
+  font-family: 'M PLUS Rounded 1c', monospace;
   font-size: 0.7rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-primary);
+  box-shadow: 0 2px 0 rgba(0,0,0,0.3);
 }
 
+/* Tag prompt */
 .tag-prompt {
   position: absolute;
-  top: 55%;
+  top: 58%;
   left: 50%;
   transform: translate(-50%, -50%);
   padding: 12px 32px;
@@ -666,6 +869,7 @@ kbd {
   border-radius: var(--radius-lg);
   animation: tagPulse 1.5s ease-in-out infinite;
   pointer-events: none;
+  backdrop-filter: blur(8px);
 }
 
 .tag-prompt-text {
@@ -1059,6 +1263,179 @@ input[type="range"]:active::-webkit-slider-thumb {
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.25);
+}
+
+/* ============================================================
+   LOBBY DECORATIVE BLOBS
+   ============================================================ */
+.lobby-paint-blobs {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: inherit;
+  z-index: -1;
+}
+
+.blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(40px);
+  opacity: 0.12;
+  animation: blobFloat 8s ease-in-out infinite;
+}
+
+.blob-1 { width: 200px; height: 200px; background: #7c3aed; top: -50px; left: -60px; animation-delay: 0s; }
+.blob-2 { width: 160px; height: 160px; background: #ec4899; top: -30px; right: -40px; animation-delay: -2s; }
+.blob-3 { width: 180px; height: 180px; background: #06b6d4; bottom: -40px; left: 30%; animation-delay: -4s; }
+.blob-4 { width: 140px; height: 140px; background: #f97316; bottom: -20px; right: 20%; animation-delay: -6s; }
+
+@keyframes blobFloat {
+  0%, 100% { transform: translate(0,0) scale(1); }
+  33% { transform: translate(20px,-15px) scale(1.05); }
+  66% { transform: translate(-10px,10px) scale(0.96); }
+}
+
+/* ============================================================
+   COLOR PRESETS
+   ============================================================ */
+.color-presets {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+}
+
+.color-preset {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  outline: none;
+}
+
+.color-preset:hover {
+  transform: scale(1.15);
+  border-color: rgba(255,255,255,0.6);
+}
+
+.color-preset.selected {
+  border-color: white;
+  box-shadow: 0 0 8px rgba(255,255,255,0.4);
+}
+
+/* ============================================================
+   MAP PREVIEWS (join panel)
+   ============================================================ */
+.map-previews {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.map-preview {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.06);
+  border: 2px solid rgba(255,255,255,0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  title: attr(title);
+}
+
+.map-preview:hover, .map-preview.active {
+  background: rgba(124, 58, 237, 0.2);
+  border-color: rgba(124, 58, 237, 0.5);
+  transform: scale(1.1);
+}
+
+/* ============================================================
+   WAITING ROOM HEADER
+   ============================================================ */
+.waiting-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.waiting-header h2 {
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+/* ============================================================
+   SEEKER WAIT PROGRESS BAR
+   ============================================================ */
+.seeker-wait-bar {
+  width: 300px;
+  height: 8px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.seeker-wait-fill {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #06b6d4, #7c3aed);
+  border-radius: 4px;
+  transition: width 1s linear;
+}
+
+/* ============================================================
+   POINTER LOCK PROMPT
+   ============================================================ */
+.pointer-lock-prompt {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(8px);
+  animation: fadeIn 0.3s ease both;
+}
+
+.plp-inner {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 40px 60px;
+  background: rgba(15,15,35,0.8);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 20px;
+}
+
+.plp-icon { font-size: 3rem; }
+.plp-inner p { font-size: 1.1rem; font-weight: 500; }
+.plp-sub { font-size: 0.85rem; color: var(--text-secondary); }
+
+/* ============================================================
+   ROLE REVEAL ADDITIONS
+   ============================================================ */
+.role-reveal-icon {
+  font-size: 5rem;
+  animation: pulse 1.5s ease-in-out infinite;
+  margin-bottom: 16px;
+}
+
+.role-reveal-countdown {
+  margin-top: 24px;
+  font-size: 3rem;
+  font-weight: 900;
+  color: var(--accent-secondary);
+  font-family: 'M PLUS Rounded 1c', sans-serif;
 }
 
 /* ============================================================

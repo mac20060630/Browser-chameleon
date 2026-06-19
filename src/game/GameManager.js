@@ -12,6 +12,7 @@ import { PaintSystem } from './PaintSystem.js';
 import { ParticleSystem } from './ParticleSystem.js';
 import { PoseSystem } from './PoseSystem.js';
 import { TagSystem } from './TagSystem.js';
+import { WeaponModel } from './WeaponModel.js';
 import { audio } from '../utils/AudioManager.js';
 
 export const PHASES = {
@@ -47,6 +48,7 @@ export class GameManager {
     this.paintSystem = null;
     this.poseSystem = null;
     this.tagSystem = null;
+    this.weaponModel = null;
 
     // Other players
     this.remotePlayers = new Map(); // playerId -> { model: CharacterModel, position, rotation, role, alive }
@@ -353,11 +355,24 @@ export class GameManager {
 
     // Show game HUD
     this.ui.hud.show();
-    this.ui.hud.setPhase('PREPARATION');
+    this.ui.hud.setPhase('preparation');
     this.ui.hud.setRole(this.role);
     this.ui.hud.setTimer(this.timeRemaining);
-    this.ui.hud.showControls(this.role, 'prep');
+    this.ui.hud.showControls(this.role, 'preparation');
     this.ui.hud.showCrosshair();
+    this.ui.hud.hideRemaining(); // Remaining count only shown in hunt
+
+    // Sidebar and weapon are shown for hiders only
+    if (this.role === 'hider') {
+      this.ui.hud.showSidebar();
+      this.weaponModel?.show();
+    } else {
+      this.ui.hud.hideSidebar();
+      this.weaponModel?.hide();
+    }
+
+    // Update life/seeker icons
+    this._updateAliveCount();
 
     // Enable movement for hiders
     if (this.playerController) {
@@ -369,11 +384,13 @@ export class GameManager {
   _startHuntPhase() {
     this.phase = PHASES.HUNT;
 
-    this.ui.hud.setPhase('HUNT');
+    this.ui.hud.setPhase('hunt');
     this.ui.hud.setTimer(this.timeRemaining);
+    this.ui.hud.hideSidebar();  // Sidebar hidden for all in hunt
+    this._updateAliveCount();
 
     if (this.role === 'hider') {
-      // Freeze hider
+      // Freeze hider — they've committed to their pose
       if (this.playerController) {
         this.playerController.setCanMove(false);
       }
@@ -383,11 +400,15 @@ export class GameManager {
       this.paintSystem?.deactivate();
       this.ui.hud.hideControls();
       this.ui.hud.hideCrosshair();
+      this.ui.hud.hideRemaining();
+      this.weaponModel?.hide();
     } else {
       // Seeker: enable movement and tag system
       this.ui.hud.show();
       this.ui.hud.showControls(this.role, 'hunt');
       this.ui.hud.showCrosshair();
+      this.ui.hud.showRemaining(); // Show 残り人数 for seekers
+      this.weaponModel?.hide();    // No weapon for seekers (they carry a flashlight conceptually)
 
       if (this.playerController) {
         this.playerController.setCanMove(true);
@@ -564,6 +585,25 @@ export class GameManager {
     // Particle system
     this.particleSystem = new ParticleSystem(this.scene);
 
+    // Weapon model (paint gun in first-person)
+    this.weaponModel = new WeaponModel(this.camera, this.scene);
+
+    // Sync weapon muzzle color when eyedropper picks a color.
+    // PaintSystem uses onColorPicked callback (not a setColor method).
+    this.paintSystem.onColorPicked = (r, g, b) => {
+      this.weaponModel?.setPaintColor(r, g, b);
+      this.ui.paintTool.setColorFromEyedropper(r, g, b);
+    };
+
+    // Also intercept PaintToolUI's _updatePaintSystem to keep weapon in sync
+    // when the HSV sliders change.
+    const origUpdatePaintSystem = this.ui.paintTool._updatePaintSystem.bind(this.ui.paintTool);
+    this.ui.paintTool._updatePaintSystem = () => {
+      origUpdatePaintSystem();
+      const { r, g, b } = this.paintSystem.currentColor;
+      this.weaponModel?.setPaintColor(r, g, b);
+    };
+
     // Send position updates
     this._startPositionSync();
   }
@@ -589,6 +629,10 @@ export class GameManager {
     this.playerController?.dispose();
     this.localCharacter?.removeFromScene();
     this.localCharacter?.dispose();
+
+    // Dispose weapon
+    this.weaponModel?.dispose();
+    this.weaponModel = null;
 
     // Stop audio if it was running
     audio.stopBGM();
@@ -703,18 +747,37 @@ export class GameManager {
      ================================================================ */
   _showRoleReveal(role) {
     const screen = document.getElementById('role-reveal-screen');
+    const icon = document.getElementById('role-reveal-icon');
     const text = document.getElementById('role-reveal-text');
     const desc = document.getElementById('role-reveal-desc');
+    const countdown = document.getElementById('role-reveal-countdown');
 
     if (role === 'hider') {
-      text.textContent = '🎨 HIDER';
-      desc.textContent = 'Paint yourself and find a hiding spot!';
+      if (icon) icon.textContent = '🎨';
+      if (text) text.textContent = 'HIDER';
+      if (desc) desc.textContent = 'Paint yourself and blend into the environment!';
     } else {
-      text.textContent = '🔦 SEEKER';
-      desc.textContent = 'Wait for hiders to prepare, then hunt them down!';
+      if (icon) icon.textContent = '🔦';
+      if (text) text.textContent = 'SEEKER';
+      if (desc) desc.textContent = 'Wait for hiders to prepare, then hunt them down!';
     }
 
     screen.classList.remove('hidden');
+
+    // Countdown 3, 2, 1…
+    if (countdown) {
+      let ct = 3;
+      countdown.textContent = ct;
+      const interval = setInterval(() => {
+        ct--;
+        if (ct <= 0) {
+          clearInterval(interval);
+          countdown.textContent = '';
+        } else {
+          countdown.textContent = ct;
+        }
+      }, 700);
+    }
   }
 
   _hideRoleReveal() {
@@ -737,18 +800,24 @@ export class GameManager {
   _updateAliveCount() {
     let alive = 0;
     let total = 0;
+    let seekers = 0;
     for (const [, rp] of this.remotePlayers) {
       if (rp.role === 'hider') {
         total++;
         if (rp.alive) alive++;
+      } else if (rp.role === 'seeker') {
+        seekers++;
       }
     }
-    // Count local player if hider
+    // Count local player
     if (this.role === 'hider') {
       total++;
-      alive++; // local player always alive from their perspective (server handles death)
+      alive++;
+    } else if (this.role === 'seeker') {
+      seekers++;
     }
     this.ui.hud.setAliveCount(alive, total);
+    this.ui.hud.setSeekerCount(seekers);
   }
 
   _flashPlayerRed(model) {
@@ -811,26 +880,47 @@ export class GameManager {
       const pos = this.playerController.getPosition();
       this.localCharacter.setPosition(pos.x, pos.y, pos.z);
       this.localCharacter.setRotation(this.playerController.getRotation());
-      
+
       // Update tag system proximity checks
       if (this.tagSystem) {
         this.tagSystem.update(new THREE.Vector3(pos.x, pos.y, pos.z));
+      }
+
+      // Update weapon model
+      if (this.weaponModel) {
+        const isInFPS = this.playerController && !this.playerController.isThirdPerson;
+        const isPlayable = this.phase === PHASES.PREP || this.phase === PHASES.HUNT;
+        const paintOpen = this.ui.paintTool.isVisible();
+        const poseOpen = this.ui.poseMenu.isVisible();
+
+        // Show weapon in FPS mode when not in UI menus
+        if (isPlayable && isInFPS && !paintOpen && !poseOpen) {
+          this.weaponModel.show();
+        } else {
+          this.weaponModel.hide();
+        }
+
+        // Walk sway
+        const k = this.playerController.keys;
+        const isWalking = k.w || k.a || k.s || k.d;
+        this.weaponModel.setWalking(isWalking);
+        this.weaponModel.update(deltaTime);
       }
     }
 
     // Update seeker waiting screen timer
     if (this.phase === PHASES.PREP && this.role === 'seeker') {
       const timerEl = document.getElementById('seeker-wait-timer');
-      if (timerEl) timerEl.textContent = this.timeRemaining;
+      if (timerEl) timerEl.textContent = Math.ceil(this.timeRemaining);
     }
 
-    // Smooth remote player interpolation
+    // Smooth remote player interpolation (lerp toward server position)
     for (const [, rp] of this.remotePlayers) {
       if (rp.model && rp.position) {
         const current = rp.model.group.position;
-        current.x += (rp.position.x - current.x) * 0.2;
-        current.y += (rp.position.y - current.y) * 0.2;
-        current.z += (rp.position.z - current.z) * 0.2;
+        current.x += (rp.position.x - current.x) * 0.15;
+        current.y += (rp.position.y - current.y) * 0.15;
+        current.z += (rp.position.z - current.z) * 0.15;
       }
     }
   }
