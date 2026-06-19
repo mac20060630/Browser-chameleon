@@ -238,7 +238,7 @@ export class MapBuilder {
   // PARTY ROOM
   // -----------------------------------------------------------------------
   _buildPartyRoom() {
-    const W = 20, D = 15, H = 4;
+    const W = 60, D = 50, H = 5;
     const add = m => this._add(m);
     const addC = c => this._addCol(c);
 
@@ -360,9 +360,9 @@ export class MapBuilder {
     const dl = new THREE.DirectionalLight(0xffffff, 1.2);
     dl.position.set(10,20,10); dl.castShadow=true;
     dl.shadow.mapSize.set(2048,2048);
-    const d=15; dl.shadow.camera.left=-d; dl.shadow.camera.right=d;
+    const d=30; dl.shadow.camera.left=-d; dl.shadow.camera.right=d;
     dl.shadow.camera.top=d; dl.shadow.camera.bottom=-d;
-    dl.shadow.camera.near=0.1; dl.shadow.camera.far=50; dl.shadow.bias=-0.0005;
+    dl.shadow.camera.near=0.1; dl.shadow.camera.far=60; dl.shadow.bias=-0.0005;
     this._addLight(dl);
     const a1=new THREE.PointLight(0xFF6B6B,0.5,15); a1.position.set(-W/2+2,2.5,D/2-2); this._addLight(a1);
     const a2=new THREE.PointLight(0x4ECDC4,0.5,15); a2.position.set(W/2-2,2.5,-D/2+2); this._addLight(a2);
@@ -383,7 +383,7 @@ export class MapBuilder {
   // OFFICE
   // -----------------------------------------------------------------------
   _buildOffice() {
-    const W=20, D=15, H=4;
+    const W=40, D=30, H=5;
     const add = m => this._add(m);
     const addC = c => this._addCol(c);
 
@@ -499,7 +499,7 @@ export class MapBuilder {
   // HAUNTED MANSION — dark green damask walls, checkered B&W floor, gold frames
   // -----------------------------------------------------------------------
   _buildHauntedMansion() {
-    const W=24, D=16, H=4.5;
+    const W=48, D=32, H=5;
     const add = m => this._add(m);
     const addC = c => this._addCol(c);
 
@@ -669,7 +669,7 @@ export class MapBuilder {
   // FARMHOUSE — mint/teal walls, grass floor, hay bales, cows
   // -----------------------------------------------------------------------
   _buildFarmhouse() {
-    const W=22, D=16, H=4;
+    const W=44, D=32, H=5;
     const add = m => this._add(m);
     const addC = c => this._addCol(c);
 
@@ -833,7 +833,7 @@ export class MapBuilder {
   // BALLROOM — grand chandeliers, piano, marble floors, columns
   // -----------------------------------------------------------------------
   _buildBallroom() {
-    const W=26, D=20, H=6;
+    const W=52, D=40, H=6;
     const add = m => this._add(m);
     const addC = c => this._addCol(c);
 

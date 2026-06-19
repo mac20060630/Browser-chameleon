@@ -14,16 +14,12 @@ import * as THREE from 'three';
 // ---------------------------------------------------------------------------
 const POSES = {
   'standing': {
-    head:      { position: { x: 0, y: 1.65, z: 0 },      rotation: { x: 0, y: 0, z: 0 } },
-    torso:     { position: { x: 0, y: 1.0, z: 0 },        rotation: { x: 0, y: 0, z: 0 } },
-    leftArm:   { position: { x: -0.5, y: 1.1, z: 0 },     rotation: { x: 0, y: 0, z: -0.15 } },
-    rightArm:  { position: { x: 0.5, y: 1.1, z: 0 },      rotation: { x: 0, y: 0, z: 0.15 } },
-    leftLeg:   { position: { x: -0.18, y: 0.35, z: 0 },   rotation: { x: 0, y: 0, z: 0 } },
-    rightLeg:  { position: { x: 0.18, y: 0.35, z: 0 },    rotation: { x: 0, y: 0, z: 0 } },
-    leftHand:  { position: { x: -0.5, y: 0.72, z: 0 },    rotation: { x: 0, y: 0, z: 0 } },
-    rightHand: { position: { x: 0.5, y: 0.72, z: 0 },     rotation: { x: 0, y: 0, z: 0 } },
-    leftFoot:  { position: { x: -0.18, y: 0.05, z: 0.03 },rotation: { x: 0, y: 0, z: 0 } },
-    rightFoot: { position: { x: 0.18, y: 0.05, z: 0.03 }, rotation: { x: 0, y: 0, z: 0 } },
+    head:      { position: { x: 0, y: 1.55, z: 0 },      rotation: { x: 0, y: 0, z: 0 } },
+    torso:     { position: { x: 0, y: 0.95, z: 0 },       rotation: { x: 0, y: 0, z: 0 } },
+    leftArm:   { position: { x: -0.42, y: 1.05, z: 0 },   rotation: { x: 0, y: 0, z: -0.15 } },
+    rightArm:  { position: { x: 0.42, y: 1.05, z: 0 },    rotation: { x: 0, y: 0, z: 0.15 } },
+    leftLeg:   { position: { x: -0.2, y: 0.35, z: 0 },    rotation: { x: 0, y: 0, z: 0 } },
+    rightLeg:  { position: { x: 0.2, y: 0.35, z: 0 },     rotation: { x: 0, y: 0, z: 0 } },
   },
 
   'relaxed': {
@@ -33,10 +29,15 @@ const POSES = {
     rightArm:  { position: { x: 0.45, y: 0.95, z: 0.05 }, rotation: { x: 0.15, y: 0, z: -0.25 } },
     leftLeg:   { position: { x: -0.18, y: 0.35, z: 0 },  rotation: { x: 0, y: 0, z: 0 } },
     rightLeg:  { position: { x: 0.18, y: 0.35, z: 0 },   rotation: { x: 0, y: 0, z: 0 } },
-    leftHand:  { position: { x: -0.45, y: 0.55, z: 0.1 }, rotation: { x: 0, y: 0, z: 0 } },
-    rightHand: { position: { x: 0.45, y: 0.55, z: 0.1 },  rotation: { x: 0, y: 0, z: 0 } },
-    leftFoot:  { position: { x: -0.18, y: 0.05, z: 0.03 },rotation: { x: 0, y: 0, z: 0 } },
-    rightFoot: { position: { x: 0.18, y: 0.05, z: 0.03 }, rotation: { x: 0, y: 0, z: 0 } },
+  },
+
+  'running1': {
+    head:      { position: { x: 0, y: 1.5, z: 0.15 },    rotation: { x: 0.2, y: 0, z: 0 } },
+    torso:     { position: { x: 0, y: 0.9, z: 0.1 },      rotation: { x: 0.2, y: 0, z: 0 } },
+    leftArm:   { position: { x: -0.42, y: 1.0, z: 0.3 },  rotation: { x: -1.0, y: 0, z: -0.15 } },
+    rightArm:  { position: { x: 0.42, y: 1.0, z: -0.3 },  rotation: { x: 1.0, y: 0, z: 0.15 } },
+    leftLeg:   { position: { x: -0.2, y: 0.35, z: 0.4 },  rotation: { x: -0.8, y: 0, z: 0 } },
+    rightLeg:  { position: { x: 0.2, y: 0.35, z: -0.4 },  rotation: { x: 0.8, y: 0, z: 0 } },
   },
 
   'crouching': {
@@ -46,10 +47,15 @@ const POSES = {
     rightArm:  { position: { x: 0.45, y: 0.65, z: 0.15 }, rotation: { x: 0.4, y: 0, z: -0.2 } },
     leftLeg:   { position: { x: -0.2, y: 0.25, z: 0.15 }, rotation: { x: -0.8, y: 0, z: 0 } },
     rightLeg:  { position: { x: 0.2, y: 0.25, z: 0.15 },  rotation: { x: -0.8, y: 0, z: 0 } },
-    leftHand:  { position: { x: -0.4, y: 0.35, z: 0.3 },  rotation: { x: 0, y: 0, z: 0 } },
-    rightHand: { position: { x: 0.4, y: 0.35, z: 0.3 },   rotation: { x: 0, y: 0, z: 0 } },
-    leftFoot:  { position: { x: -0.2, y: 0.05, z: 0.25 }, rotation: { x: 0, y: 0, z: 0 } },
-    rightFoot: { position: { x: 0.2, y: 0.05, z: 0.25 },  rotation: { x: 0, y: 0, z: 0 } },
+  },
+
+  'running2': {
+    head:      { position: { x: 0, y: 1.5, z: 0.15 },    rotation: { x: 0.2, y: 0, z: 0 } },
+    torso:     { position: { x: 0, y: 0.9, z: 0.1 },      rotation: { x: 0.2, y: 0, z: 0 } },
+    leftArm:   { position: { x: -0.42, y: 1.0, z: -0.3 }, rotation: { x: 1.0, y: 0, z: -0.15 } },
+    rightArm:  { position: { x: 0.42, y: 1.0, z: 0.3 },   rotation: { x: -1.0, y: 0, z: 0.15 } },
+    leftLeg:   { position: { x: -0.2, y: 0.35, z: -0.4 }, rotation: { x: 0.8, y: 0, z: 0 } },
+    rightLeg:  { position: { x: 0.2, y: 0.35, z: 0.4 },   rotation: { x: -0.8, y: 0, z: 0 } },
   },
 
   'lying-flat': {
@@ -59,10 +65,6 @@ const POSES = {
     rightArm:  { position: { x: 0.5, y: 0.15, z: 0 },    rotation: { x: -Math.PI / 2, y: 0, z: 0 } },
     leftLeg:   { position: { x: -0.18, y: 0.15, z: 0.65 },rotation: { x: -Math.PI / 2, y: 0, z: 0 } },
     rightLeg:  { position: { x: 0.18, y: 0.15, z: 0.65 }, rotation: { x: -Math.PI / 2, y: 0, z: 0 } },
-    leftHand:  { position: { x: -0.5, y: 0.1, z: 0.4 },  rotation: { x: 0, y: 0, z: 0 } },
-    rightHand: { position: { x: 0.5, y: 0.1, z: 0.4 },   rotation: { x: 0, y: 0, z: 0 } },
-    leftFoot:  { position: { x: -0.18, y: 0.1, z: 1.0 },  rotation: { x: -Math.PI / 2, y: 0, z: 0 } },
-    rightFoot: { position: { x: 0.18, y: 0.1, z: 1.0 },   rotation: { x: -Math.PI / 2, y: 0, z: 0 } },
   },
 
   'stretched': {
@@ -72,10 +74,6 @@ const POSES = {
     rightArm:  { position: { x: 0.35, y: 1.45, z: 0 },   rotation: { x: 0, y: 0, z: 0.4 } },
     leftLeg:   { position: { x: -0.15, y: 0.35, z: 0 },  rotation: { x: 0, y: 0, z: 0 } },
     rightLeg:  { position: { x: 0.15, y: 0.35, z: 0 },   rotation: { x: 0, y: 0, z: 0 } },
-    leftHand:  { position: { x: -0.35, y: 2.0, z: 0 },   rotation: { x: 0, y: 0, z: 0 } },
-    rightHand: { position: { x: 0.35, y: 2.0, z: 0 },    rotation: { x: 0, y: 0, z: 0 } },
-    leftFoot:  { position: { x: -0.15, y: 0.05, z: 0.03 },rotation: { x: 0, y: 0, z: 0 } },
-    rightFoot: { position: { x: 0.15, y: 0.05, z: 0.03 }, rotation: { x: 0, y: 0, z: 0 } },
   },
 
   'fetal': {
@@ -85,10 +83,6 @@ const POSES = {
     rightArm:  { position: { x: 0.25, y: 0.45, z: -0.2 }, rotation: { x: 1.2, y: 0, z: -0.3 } },
     leftLeg:   { position: { x: -0.15, y: 0.2, z: -0.2 }, rotation: { x: -1.5, y: 0, z: 0 } },
     rightLeg:  { position: { x: 0.15, y: 0.2, z: -0.2 },  rotation: { x: -1.5, y: 0, z: 0 } },
-    leftHand:  { position: { x: -0.15, y: 0.3, z: -0.35 },rotation: { x: 0, y: 0, z: 0 } },
-    rightHand: { position: { x: 0.15, y: 0.3, z: -0.35 }, rotation: { x: 0, y: 0, z: 0 } },
-    leftFoot:  { position: { x: -0.15, y: 0.1, z: -0.35 },rotation: { x: 0, y: 0, z: 0 } },
-    rightFoot: { position: { x: 0.15, y: 0.1, z: -0.35 }, rotation: { x: 0, y: 0, z: 0 } },
   },
 
   'wall-lean': {
@@ -98,10 +92,6 @@ const POSES = {
     rightArm:  { position: { x: 0.45, y: 0.85, z: -0.1 }, rotation: { x: -0.2, y: 0, z: -0.15 } },
     leftLeg:   { position: { x: -0.2, y: 0.35, z: 0.15 }, rotation: { x: 0.2, y: 0, z: 0 } },
     rightLeg:  { position: { x: 0.2, y: 0.35, z: -0.05 }, rotation: { x: -0.15, y: 0, z: 0 } },
-    leftHand:  { position: { x: -0.5, y: 0.5, z: 0 },    rotation: { x: 0, y: 0, z: 0 } },
-    rightHand: { position: { x: 0.5, y: 0.55, z: -0.15 }, rotation: { x: 0, y: 0, z: 0 } },
-    leftFoot:  { position: { x: -0.2, y: 0.05, z: 0.3 },  rotation: { x: 0, y: 0, z: 0 } },
-    rightFoot: { position: { x: 0.2, y: 0.05, z: -0.05 }, rotation: { x: 0, y: 0, z: 0 } },
   },
 
   'sitting': {
@@ -111,10 +101,6 @@ const POSES = {
     rightArm:  { position: { x: 0.45, y: 0.65, z: 0 },   rotation: { x: 0.3, y: 0, z: -0.2 } },
     leftLeg:   { position: { x: -0.2, y: 0.25, z: 0.25 },rotation: { x: -Math.PI / 2, y: 0, z: 0 } },
     rightLeg:  { position: { x: 0.2, y: 0.25, z: 0.25 }, rotation: { x: -Math.PI / 2, y: 0, z: 0 } },
-    leftHand:  { position: { x: -0.45, y: 0.35, z: 0.15 },rotation: { x: 0, y: 0, z: 0 } },
-    rightHand: { position: { x: 0.45, y: 0.35, z: 0.15 }, rotation: { x: 0, y: 0, z: 0 } },
-    leftFoot:  { position: { x: -0.2, y: 0.05, z: 0.55 }, rotation: { x: 0, y: 0, z: 0 } },
-    rightFoot: { position: { x: 0.2, y: 0.05, z: 0.55 },  rotation: { x: 0, y: 0, z: 0 } },
   },
 
   'star': {
@@ -124,10 +110,6 @@ const POSES = {
     rightArm:  { position: { x: 0.65, y: 1.15, z: 0 },   rotation: { x: 0, y: 0, z: 0.8 } },
     leftLeg:   { position: { x: -0.35, y: 0.32, z: 0 },  rotation: { x: 0, y: 0, z: 0.35 } },
     rightLeg:  { position: { x: 0.35, y: 0.32, z: 0 },   rotation: { x: 0, y: 0, z: -0.35 } },
-    leftHand:  { position: { x: -0.95, y: 1.3, z: 0 },   rotation: { x: 0, y: 0, z: 0 } },
-    rightHand: { position: { x: 0.95, y: 1.3, z: 0 },    rotation: { x: 0, y: 0, z: 0 } },
-    leftFoot:  { position: { x: -0.5, y: 0.05, z: 0.03 }, rotation: { x: 0, y: 0, z: 0 } },
-    rightFoot: { position: { x: 0.5, y: 0.05, z: 0.03 },  rotation: { x: 0, y: 0, z: 0 } },
   },
 
   'ball': {
@@ -137,10 +119,6 @@ const POSES = {
     rightArm:  { position: { x: 0.2, y: 0.35, z: -0.25 }, rotation: { x: 1.5, y: 0, z: -0.5 } },
     leftLeg:   { position: { x: -0.12, y: 0.15, z: -0.2 },rotation: { x: -1.8, y: 0, z: 0 } },
     rightLeg:  { position: { x: 0.12, y: 0.15, z: -0.2 }, rotation: { x: -1.8, y: 0, z: 0 } },
-    leftHand:  { position: { x: -0.1, y: 0.25, z: -0.4 }, rotation: { x: 0, y: 0, z: 0 } },
-    rightHand: { position: { x: 0.1, y: 0.25, z: -0.4 },  rotation: { x: 0, y: 0, z: 0 } },
-    leftFoot:  { position: { x: -0.1, y: 0.08, z: -0.35 },rotation: { x: 0.5, y: 0, z: 0 } },
-    rightFoot: { position: { x: 0.1, y: 0.08, z: -0.35 }, rotation: { x: 0.5, y: 0, z: 0 } },
   },
 
   't-pose': {
@@ -150,10 +128,15 @@ const POSES = {
     rightArm:  { position: { x: 0.65, y: 1.05, z: 0 },   rotation: { x: 0, y: 0, z: Math.PI / 2 } },
     leftLeg:   { position: { x: -0.18, y: 0.35, z: 0 },  rotation: { x: 0, y: 0, z: 0 } },
     rightLeg:  { position: { x: 0.18, y: 0.35, z: 0 },   rotation: { x: 0, y: 0, z: 0 } },
-    leftHand:  { position: { x: -1.0, y: 1.05, z: 0 },   rotation: { x: 0, y: 0, z: 0 } },
-    rightHand: { position: { x: 1.0, y: 1.05, z: 0 },    rotation: { x: 0, y: 0, z: 0 } },
-    leftFoot:  { position: { x: -0.18, y: 0.05, z: 0.03 },rotation: { x: 0, y: 0, z: 0 } },
-    rightFoot: { position: { x: 0.18, y: 0.05, z: 0.03 }, rotation: { x: 0, y: 0, z: 0 } },
+  },
+
+  'walking1': {
+    head:      { position: { x: 0, y: 1.55, z: 0 },      rotation: { x: 0, y: 0, z: 0 } },
+    torso:     { position: { x: 0, y: 0.95, z: 0 },       rotation: { x: 0, y: 0, z: 0 } },
+    leftArm:   { position: { x: -0.42, y: 1.05, z: 0.2 }, rotation: { x: -0.5, y: 0, z: -0.15 } },
+    rightArm:  { position: { x: 0.42, y: 1.05, z: -0.2 }, rotation: { x: 0.5, y: 0, z: 0.15 } },
+    leftLeg:   { position: { x: -0.2, y: 0.35, z: 0.3 },  rotation: { x: -0.4, y: 0, z: 0 } },
+    rightLeg:  { position: { x: 0.2, y: 0.35, z: -0.3 },  rotation: { x: 0.4, y: 0, z: 0 } },
   },
 
   'prayer': {
@@ -163,10 +146,6 @@ const POSES = {
     rightArm:  { position: { x: 0.2, y: 0.95, z: -0.2 }, rotation: { x: 0.9, y: 0, z: -0.4 } },
     leftLeg:   { position: { x: -0.18, y: 0.35, z: 0 },  rotation: { x: 0, y: 0, z: 0 } },
     rightLeg:  { position: { x: 0.18, y: 0.35, z: 0 },   rotation: { x: 0, y: 0, z: 0 } },
-    leftHand:  { position: { x: -0.02, y: 0.85, z: -0.4 },rotation: { x: 0, y: 0, z: 0 } },
-    rightHand: { position: { x: 0.02, y: 0.85, z: -0.4 }, rotation: { x: 0, y: 0, z: 0 } },
-    leftFoot:  { position: { x: -0.18, y: 0.05, z: 0.03 },rotation: { x: 0, y: 0, z: 0 } },
-    rightFoot: { position: { x: 0.18, y: 0.05, z: 0.03 }, rotation: { x: 0, y: 0, z: 0 } },
   },
 };
 
@@ -174,16 +153,12 @@ const POSES = {
 // Body-part blueprint definitions
 // ---------------------------------------------------------------------------
 const BODY_PART_DEFS = [
-  { name: 'head',      type: 'sphere',   args: [0.35, 24, 24],               defaultPos: [0, 1.65, 0] },
-  { name: 'torso',     type: 'box',      args: [0.7, 0.8, 0.4],             defaultPos: [0, 1.0, 0] },
-  { name: 'leftArm',   type: 'cylinder', args: [0.12, 0.12, 0.6, 12],      defaultPos: [-0.5, 1.1, 0] },
-  { name: 'rightArm',  type: 'cylinder', args: [0.12, 0.12, 0.6, 12],      defaultPos: [0.5, 1.1, 0] },
-  { name: 'leftLeg',   type: 'cylinder', args: [0.14, 0.14, 0.6, 12],      defaultPos: [-0.18, 0.35, 0] },
-  { name: 'rightLeg',  type: 'cylinder', args: [0.14, 0.14, 0.6, 12],      defaultPos: [0.18, 0.35, 0] },
-  { name: 'leftHand',  type: 'sphere',   args: [0.1, 16, 16],               defaultPos: [-0.5, 0.72, 0] },
-  { name: 'rightHand', type: 'sphere',   args: [0.1, 16, 16],               defaultPos: [0.5, 0.72, 0] },
-  { name: 'leftFoot',  type: 'box',      args: [0.15, 0.1, 0.25],           defaultPos: [-0.18, 0.05, 0.03] },
-  { name: 'rightFoot', type: 'box',      args: [0.15, 0.1, 0.25],           defaultPos: [0.18, 0.05, 0.03] },
+  { name: 'head',      type: 'sphere',   args: [0.42, 32, 32],               defaultPos: [0, 1.55, 0] },
+  { name: 'torso',     type: 'capsule',  args: [0.38, 0.55, 32, 32],         defaultPos: [0, 0.95, 0] },
+  { name: 'leftArm',   type: 'capsule',  args: [0.18, 0.45, 32, 32],         defaultPos: [-0.42, 1.05, 0] },
+  { name: 'rightArm',  type: 'capsule',  args: [0.18, 0.45, 32, 32],         defaultPos: [0.42, 1.05, 0] },
+  { name: 'leftLeg',   type: 'capsule',  args: [0.18, 0.4, 32, 32],          defaultPos: [-0.2, 0.35, 0] },
+  { name: 'rightLeg',  type: 'capsule',  args: [0.18, 0.4, 32, 32],          defaultPos: [0.2, 0.35, 0] },
 ];
 
 // ---------------------------------------------------------------------------
@@ -253,6 +228,7 @@ export class CharacterModel {
       case 'sphere':   return new THREE.SphereGeometry(...def.args);
       case 'box':      return new THREE.BoxGeometry(...def.args);
       case 'cylinder': return new THREE.CylinderGeometry(...def.args);
+      case 'capsule':  return new THREE.CapsuleGeometry(...def.args);
       default:         return new THREE.BoxGeometry(0.2, 0.2, 0.2);
     }
   }

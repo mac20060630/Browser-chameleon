@@ -53,7 +53,7 @@ export class HUD {
       this.phaseBadge.classList.toggle('hunt', isHunt);
     }
     if (this.timerLabel2) {
-      this.timerLabel2.textContent = isHunt ? '残り時間' : '準備時間';
+      this.timerLabel2.textContent = isHunt ? 'Time Remaining' : 'Prep Time';
     }
   }
 
@@ -162,7 +162,7 @@ export class HUD {
         { key: 'F',    action: 'Paint'  },
         { key: 'Q',    action: 'Pose'   },
         { key: 'V',    action: 'Camera' },
-        { key: 'Enter',action: 'Lock'   },
+        { key: 'Click',action: 'Lock'   },
       ];
     } else if (role === 'hider' && phase === 'hunt') {
       this.controls.classList.add('hidden');

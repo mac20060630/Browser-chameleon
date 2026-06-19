@@ -73,7 +73,7 @@ export class PlayerController {
 
     // -- Room bounds (set after map is built) --------------------------------
     /** @type {{ minX: number, maxX: number, minZ: number, maxZ: number }} */
-    this.bounds = { minX: -9.5, maxX: 9.5, minZ: -7.0, maxZ: 7.0 };
+    this.bounds = { minX: -40.0, maxX: 40.0, minZ: -40.0, maxZ: 40.0 };
 
     // -- Internal scratch vectors (avoid per-frame allocation) ----------------
     this._moveDir = new THREE.Vector3();
