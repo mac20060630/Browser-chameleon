@@ -300,6 +300,10 @@
         <input type="range" id="hue-slider" class="hue-slider" min="0" max="360" value="0" />
         <span id="hue-value" class="slider-val">0°</span>
       </div>
+      <div class="slider-row">
+        <label style="flex:1;font-size:0.8rem;opacity:0.8;text-transform:uppercase;">Hex</label>
+        <span id="hex-value" class="slider-val" style="font-family: monospace;">#ff0000</span>
+      </div>
       <label>Saturation</label>
       <div class="slider-row">
         <input type="range" id="sat-slider" class="sat-slider" min="0" max="100" value="100" />
@@ -335,12 +339,28 @@
       </div>
     </div>
 
+    <!-- Effects -->
+    <div class="paint-section">
+      <label>Effects</label>
+      <div class="slider-row">
+        <label for="shadow-toggle" style="flex:1;cursor:pointer;">Bottom Shadow</label>
+        <input type="checkbox" id="shadow-toggle" />
+      </div>
+    </div>
+
     <!-- Tool Buttons -->
     <div class="paint-section paint-tools-row">
       <button id="btn-eyedropper" class="btn-tool" title="Eyedropper (E)">💧</button>
       <button id="btn-fill" class="btn-tool" title="Fill All">🪣</button>
       <button id="btn-undo" class="btn-tool" title="Undo">↩️</button>
       <button id="btn-redo" class="btn-tool" title="Redo">↪️</button>
+    </div>
+
+    <!-- View Controls -->
+    <div class="paint-section paint-tools-row" style="margin-top:-10px;">
+      <button id="btn-paint-cam-rotate" class="btn-tool" title="Rotate Camera">🔄</button>
+      <button id="btn-paint-cam-zoom-in" class="btn-tool" title="Zoom In">🔍+</button>
+      <button id="btn-paint-cam-zoom-out" class="btn-tool" title="Zoom Out">🔍-</button>
     </div>
 
     <!-- Pattern Stamps -->

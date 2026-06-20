@@ -597,6 +597,27 @@ export class GameManager {
       this.ui.paintTool.setColorFromEyedropper(r, g, b);
     };
 
+    this.ui.paintTool.onRotateCamera = () => {
+      if (this.playerController) {
+        this.playerController.rotation.yaw += Math.PI / 4;
+      }
+    };
+    this.ui.paintTool.onZoomIn = () => {
+      if (this.playerController) {
+        this.playerController.thirdPersonDistance = Math.max(1.5, this.playerController.thirdPersonDistance - 0.5);
+      }
+    };
+    this.ui.paintTool.onZoomOut = () => {
+      if (this.playerController) {
+        this.playerController.thirdPersonDistance = Math.min(8.0, this.playerController.thirdPersonDistance + 0.5);
+      }
+    };
+    this.ui.paintTool.onShadowToggle = (active) => {
+      if (this.localCharacter) {
+        this.localCharacter.setBottomShadow(active);
+      }
+    };
+
     // Tag system
     this.tagSystem = new TagSystem(this.scene, this.network);
 

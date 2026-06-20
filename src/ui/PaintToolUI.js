@@ -58,6 +58,17 @@ export class PaintToolUI {
     this.btnUndo = document.getElementById('btn-undo');
     this.btnRedo = document.getElementById('btn-redo');
 
+    // Hex display
+    this.hexValue = document.getElementById('hex-value');
+
+    // Shadow toggle
+    this.shadowToggle = document.getElementById('shadow-toggle');
+
+    // Camera controls
+    this.btnCamRotate = document.getElementById('btn-paint-cam-rotate');
+    this.btnCamZoomIn = document.getElementById('btn-paint-cam-zoom-in');
+    this.btnCamZoomOut = document.getElementById('btn-paint-cam-zoom-out');
+
     // Pattern buttons
     this.patternButtons = document.querySelectorAll('.btn-pattern');
 
@@ -98,6 +109,32 @@ export class PaintToolUI {
     this.btnFill.addEventListener('click', () => this._onFill());
     this.btnUndo.addEventListener('click', () => this._onUndo());
     this.btnRedo.addEventListener('click', () => this._onRedo());
+
+    // Shadow toggle
+    if (this.shadowToggle) {
+      this.shadowToggle.addEventListener('change', (e) => {
+        if (typeof this.onShadowToggle === 'function') {
+          this.onShadowToggle(e.target.checked);
+        }
+      });
+    }
+
+    // Camera controls
+    if (this.btnCamRotate) {
+      this.btnCamRotate.addEventListener('click', () => {
+        if (typeof this.onRotateCamera === 'function') this.onRotateCamera();
+      });
+    }
+    if (this.btnCamZoomIn) {
+      this.btnCamZoomIn.addEventListener('click', () => {
+        if (typeof this.onZoomIn === 'function') this.onZoomIn();
+      });
+    }
+    if (this.btnCamZoomOut) {
+      this.btnCamZoomOut.addEventListener('click', () => {
+        if (typeof this.onZoomOut === 'function') this.onZoomOut();
+      });
+    }
 
     // Pattern buttons
     this.patternButtons.forEach((btn) => {
@@ -196,10 +233,13 @@ export class PaintToolUI {
 
   // ───────────────────────── Preview & Sync ─────────────────────────────
 
-  /** Update the colour preview swatch from current HSV. */
+  /** Update the colour preview swatch and hex from current HSV. */
   _updatePreview() {
     const { r, g, b } = hsvToRgb(this.hue, this.saturation / 100, this.value / 100);
     this.colorPreview.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
+    if (this.hexValue) {
+      this.hexValue.textContent = rgbToHex(r, g, b);
+    }
   }
 
   /** Push the current colour settings to the paint system. */

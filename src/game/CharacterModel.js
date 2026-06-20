@@ -375,6 +375,40 @@ export class CharacterModel {
     }
   }
 
+  /**
+   * Toggle a bottom shadow gradient using an ambient occlusion map.
+   * @param {boolean} active 
+   */
+  setBottomShadow(active) {
+    if (active && !this._shadowTexture) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 4;
+      canvas.height = 256;
+      const ctx = canvas.getContext('2d');
+      const grad = ctx.createLinearGradient(0, 0, 0, 256);
+      grad.addColorStop(0, '#ffffff');
+      grad.addColorStop(0.6, '#ffffff');
+      grad.addColorStop(1, '#444444');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 4, 256);
+      this._shadowTexture = new THREE.CanvasTexture(canvas);
+      this._shadowTexture.needsUpdate = true;
+    }
+
+    for (const mesh of Object.values(this.bodyParts)) {
+      // Three.js r151+ uses the same UV set for aoMap
+      const mat = mesh.material;
+      if (active) {
+        mat.aoMap = this._shadowTexture;
+        mat.aoMapIntensity = 1.0;
+      } else {
+        mat.aoMap = null;
+        mat.aoMapIntensity = 0.0;
+      }
+      mat.needsUpdate = true;
+    }
+  }
+
   // -----------------------------------------------------------------------
   // Undo / Redo helpers (ImageData snapshots)
   // -----------------------------------------------------------------------
