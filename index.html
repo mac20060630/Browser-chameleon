@@ -53,11 +53,13 @@
           <div class="form-group">
             <label for="map-select">Map</label>
             <select id="map-select">
-              <option value="party-room">🎈 Party Room</option>
-              <option value="haunted-mansion">🏚️ Haunted Mansion</option>
-              <option value="farmhouse">🐄 Farmhouse</option>
-              <option value="ballroom">🎹 Grand Ballroom</option>
-              <option value="office">🏢 Office</option>
+              <option value="victorian-house">🏚️ Victorian House</option>
+              <option value="laundry-room">🧺 Laundry Room</option>
+              <option value="industrial-kitchen">🍳 Industrial Kitchen</option>
+              <option value="school-corridor">🏫 School Corridor</option>
+              <option value="toy-stable">🐎 Toy Stable</option>
+              <option value="clown-party">🎪 Clown Party Room</option>
+              <option value="penguin-hotel">🐧 Penguin Hotel</option>
             </select>
           </div>
           <div class="form-group">
@@ -106,11 +108,13 @@
 
           <!-- Map previews -->
           <div class="map-previews">
-            <div class="map-preview active" data-map="party-room" title="Party Room">🎈</div>
-            <div class="map-preview" data-map="haunted-mansion" title="Haunted Mansion">🏚️</div>
-            <div class="map-preview" data-map="farmhouse" title="Farmhouse">🐄</div>
-            <div class="map-preview" data-map="ballroom" title="Grand Ballroom">🎹</div>
-            <div class="map-preview" data-map="office" title="Office">🏢</div>
+            <div class="map-preview active" data-map="victorian-house" title="Victorian House">🏚️</div>
+            <div class="map-preview" data-map="laundry-room" title="Laundry Room">🧺</div>
+            <div class="map-preview" data-map="industrial-kitchen" title="Industrial Kitchen">🍳</div>
+            <div class="map-preview" data-map="school-corridor" title="School Corridor">🏫</div>
+            <div class="map-preview" data-map="toy-stable" title="Toy Stable">🐎</div>
+            <div class="map-preview" data-map="clown-party" title="Clown Party Room">🎪</div>
+            <div class="map-preview" data-map="penguin-hotel" title="Penguin Hotel">🐧</div>
           </div>
         </div>
       </div>
@@ -197,29 +201,46 @@
     </div>
 
     <!-- Role badge (top left) -->
+    <!-- Role badge (top left) -->
     <div id="hud-role" class="hud-role">HIDER</div>
 
-    <!-- Right sidebar — paint / camera mode buttons (matching screenshot) -->
+    <!-- Missed-Spot Ranking leaderboard (bottom left, visible during prep for hiders) -->
+    <div id="hud-leaderboard" class="hud-leaderboard hidden">
+      <div class="leaderboard-title">📊 Missed-Spot Ranking</div>
+      <div id="leaderboard-list" class="leaderboard-list">
+        <!-- Filled by JS -->
+      </div>
+    </div>
+
+    <!-- Right sidebar — 6 icons as per spec -->
     <div id="hud-sidebar" class="hud-sidebar hidden">
-      <div class="sidebar-btn" id="sidebar-chat" title="Chat (T)">
-        <span class="sidebar-icon">💬</span>
-        <span class="sidebar-key">T</span>
+      <div class="sidebar-btn" id="sidebar-sound" title="Sound">
+        <span class="sidebar-icon">🔊</span>
+        <span class="sidebar-key">M</span>
       </div>
       <div class="sidebar-btn sidebar-active" id="sidebar-paintmode" title="Paint Mode (F)">
         <span class="sidebar-icon">🎨</span>
         <span class="sidebar-key">F</span>
       </div>
-      <div class="sidebar-btn" id="sidebar-camera" title="Camera (V)">
+      <div class="sidebar-btn" id="sidebar-rotlock" title="Rotation Lock (R)">
+        <span class="sidebar-icon">🔒</span>
+        <span class="sidebar-key">R</span>
+      </div>
+      <div class="sidebar-btn" id="sidebar-nameplate" title="Toggle Nameplates (N)">
+        <span class="sidebar-icon">👁</span>
+        <span class="sidebar-key">N</span>
+      </div>
+      <div class="sidebar-btn" id="sidebar-xray" title="X-Ray View">
+        <span class="sidebar-icon">👁‍🗨</span>
+        <span class="sidebar-key">X</span>
+      </div>
+      <div class="sidebar-btn" id="sidebar-camera" title="Free Camera (V)">
         <span class="sidebar-icon">📷</span>
         <span class="sidebar-key">V</span>
       </div>
-      <div class="sidebar-btn sidebar-danger" id="sidebar-posemode" title="Pose Menu (Q)">
-        <span class="sidebar-icon">🧍</span>
-        <span class="sidebar-key">Q</span>
-      </div>
     </div>
 
-    <!-- Bottom-left: ammo / paint bars -->
+    <!-- Bottom-left: paint/ammo bars -->
     <div id="hud-ammo" class="hud-ammo hidden">
       <div class="ammo-bar" id="ammo-bar-1">
         <div class="ammo-fill" style="background:#00E5FF;"></div>
@@ -233,6 +254,22 @@
     <div id="hud-remaining" class="hud-remaining hidden">
       <span class="remaining-label">Remaining</span>
       <span id="hud-remaining-count" class="remaining-count">10</span>
+    </div>
+
+    <!-- Mode label box (bottom right) — always visible during game -->
+    <div id="hud-mode-box" class="hud-mode-box hidden">
+      <div class="mode-box-name" id="hud-mode-name">Infection</div>
+      <div class="mode-box-rule" id="hud-mode-rule">If you get caught, you become a hunter. Hide until the end to win.</div>
+    </div>
+
+    <!-- Detection Warning (hider only, appears when seeker sees you) -->
+    <div id="hud-detection-warning" class="hud-detection-warning hidden">
+      <!-- Lines filled by JS e.g. "In Hunter's Line of Sight +12" -->
+    </div>
+
+    <!-- Buried-too-deep Warning (center screen) -->
+    <div id="hud-buried-warning" class="hud-buried-warning hidden">
+      ⚠️ Your body is buried too much! If this continues, your location will be revealed.
     </div>
 
     <!-- Controls Hint (bottom center) -->

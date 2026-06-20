@@ -180,14 +180,22 @@ export class MapBuilder {
   // Public API
   // -----------------------------------------------------------------------
 
-  buildMap(mapId = 'party-room') {
+  buildMap(mapId = 'victorian-house') {
     switch (mapId) {
-      case 'office':          this._buildOffice();         break;
-      case 'haunted-mansion': this._buildHauntedMansion(); break;
-      case 'farmhouse':       this._buildFarmhouse();      break;
-      case 'ballroom':        this._buildBallroom();       break;
-      case 'party-room':
-      default:                this._buildPartyRoom();      break;
+      case 'victorian-house':    this._buildVictorianHouse();    break;
+      case 'laundry-room':       this._buildLaundryRoom();       break;
+      case 'industrial-kitchen': this._buildIndustrialKitchen(); break;
+      case 'school-corridor':    this._buildSchoolCorridor();    break;
+      case 'toy-stable':         this._buildToyStable();         break;
+      case 'clown-party':        this._buildClownParty();        break;
+      case 'penguin-hotel':      this._buildPenguinHotel();      break;
+      // Legacy fallbacks
+      case 'office':             this._buildIndustrialKitchen(); break;
+      case 'haunted-mansion':    this._buildVictorianHouse();    break;
+      case 'farmhouse':          this._buildToyStable();         break;
+      case 'ballroom':           this._buildSchoolCorridor();    break;
+      case 'party-room':         this._buildClownParty();        break;
+      default:                   this._buildVictorianHouse();    break;
     }
   }
 
@@ -1032,7 +1040,6 @@ export class MapBuilder {
     this._addLight(new THREE.HemisphereLight(0xFFEECC, 0x2A1A05, 0.5));
     const dl=new THREE.DirectionalLight(0xFFEECC,0.3);
     dl.position.set(0,H*2,0); dl.castShadow=false; this._addLight(dl);
-    // Warm fill lights along walls
     const wl1=new THREE.PointLight(0xFFCC88,0.6,20); wl1.position.set(-10,2,0); this._addLight(wl1);
     const wl2=new THREE.PointLight(0xFFCC88,0.6,20); wl2.position.set(10,2,0); this._addLight(wl2);
     const wl3=new THREE.PointLight(0xFFCC88,0.4,20); wl3.position.set(0,2,-D/2+2); this._addLight(wl3);
@@ -1047,4 +1054,752 @@ export class MapBuilder {
     ];
     this.spawnPoints.seeker = [{x:0,y:0,z:-D/2+2}];
   }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // MAP 1: VICTORIAN HOUSE INTERIOR
+  // Dark gothic interior — black/white checkered floor, dark red wallpaper,
+  // wooden staircase, ladders, drapes, warm dim lighting
+  // ═══════════════════════════════════════════════════════════════════════
+  _buildVictorianHouse() {
+    const W = 50, D = 40, H = 6;
+    const add = m => this._add(m);
+    const addC = c => this._addCol(c);
+
+    const FLOOR_A  = 0x111111; // black tile
+    const FLOOR_B  = 0xF5F5F5; // white tile
+    const WALL_CLR = 0x8B2222; // maroon/dark red wallpaper
+    const DARK_WOOD= 0x3D1C00;
+    const MED_WOOD = 0x5C3D1E;
+    const GOLD     = 0xD4AF37;
+    const DRAPE    = 0x6B0000;
+
+    // Checkered floor
+    for (let ix = 0; ix < W; ix++) {
+      for (let iz = 0; iz < D; iz++) {
+        const col = (ix + iz) % 2 === 0 ? FLOOR_A : FLOOR_B;
+        const tile = box(1, 0.05, 1, col, ix - W/2 + 0.5, 0, iz - D/2 + 0.5);
+        tile.receiveShadow = true; tile.castShadow = false;
+        add(tile);
+      }
+    }
+
+    // Walls — dark red maroon wallpaper
+    const wt = 0.25;
+    add(box(W, H, wt, WALL_CLR, 0, H/2,  D/2));  addC(collider(W, H, wt, 0, H/2,  D/2));
+    add(box(W, H, wt, WALL_CLR, 0, H/2, -D/2));  addC(collider(W, H, wt, 0, H/2, -D/2));
+    add(box(wt, H, D, WALL_CLR, W/2, H/2, 0));   addC(collider(wt, H, D, W/2, H/2, 0));
+    add(box(wt, H, D, WALL_CLR, -W/2, H/2, 0));  addC(collider(wt, H, D, -W/2, H/2, 0));
+    add(box(W, 0.15, D, 0x1A1A2A, 0, H, 0));
+
+    // Wooden staircase — right side
+    for (let s = 0; s < 8; s++) {
+      add(box(3, 0.15, 0.9, MED_WOOD, W/2 - 3, s * 0.4 + 0.2, D/2 - 2 - s * 0.9));
+    }
+    add(box(0.1, 3.5, 7.5, DARK_WOOD, W/2 - 1.6, 1.75, D/2 - 5.5)); // banister
+
+    // Ladders on walls
+    [[-W/2+1.5, -5], [-W/2+1.5, 5], [W/2-1.5, -8]].forEach(([lx, lz]) => {
+      add(box(0.06, 3, 0.06, DARK_WOOD, lx, 1.5, lz));
+      add(box(0.06, 3, 0.06, DARK_WOOD, lx + 0.5, 1.5, lz));
+      for (let r = 0; r < 6; r++) add(box(0.5, 0.05, 0.06, MED_WOOD, lx + 0.25, 0.4 + r * 0.5, lz));
+    });
+
+    // Hanging dark drapes on walls
+    [[-10, D/2-0.1, 0], [10, D/2-0.1, 0], [-8, -D/2+0.1, 0], [8, -D/2+0.1, 0]].forEach(([dx, dz, _]) => {
+      add(box(1.8, H*0.8, 0.1, DRAPE, dx, H*0.6, dz));
+    });
+
+    // Antique frames on walls
+    [[-15, 2.5, D/2-0.15], [0, 3, D/2-0.15], [15, 2.5, D/2-0.15]].forEach(([fx, fy, fz]) => {
+      add(box(1.4, 1.8, 0.08, GOLD, fx, fy, fz));
+      add(box(1.0, 1.4, 0.1, DARK_WOOD, fx, fy, fz + 0.05));
+    });
+
+    // Tall cabinet
+    add(box(1.5, 3.5, 0.7, DARK_WOOD, -W/2+1.5, 1.75, 8)); addC(collider(1.6, 3.6, 0.8, -W/2+1.5, 1.75, 8));
+
+    // Small table with objects
+    add(box(2, 0.08, 1, MED_WOOD, 5, 0.8, -8));
+    add(cyl(0.08, 0.08, 0.8, DARK_WOOD, 4.1, 0.4, -8.4, 4));
+    add(cyl(0.08, 0.08, 0.8, DARK_WOOD, 5.9, 0.4, -8.4, 4));
+    addC(collider(2.2, 0.9, 1.2, 5, 0.45, -8));
+
+    // Oil lamps
+    [[-W/2+2, D/2-2], [W/2-2, -D/2+2], [-5, D/2-2]].forEach(([lx, lz]) => {
+      add(cyl(0.06, 0.06, 2.0, DARK_WOOD, lx, 1, lz, 8));
+      add(sphere(0.2, mat(0xFF9D4A, { emissive: 0xFF6600, emissiveIntensity: 0.8 }), lx, 2.15, lz));
+      addC(collider(0.4, 2.2, 0.4, lx, 1.1, lz));
+    });
+
+    // Gold picture rail along top of walls
+    add(box(W-0.5, 0.08, 0.08, GOLD, 0, H-0.5,  D/2-0.3));
+    add(box(W-0.5, 0.08, 0.08, GOLD, 0, H-0.5, -D/2+0.3));
+
+    // Lighting — warm amber oil-lamp style
+    this._addLight(new THREE.HemisphereLight(0xFF9944, 0x1A0A00, 0.4));
+    const dl = new THREE.DirectionalLight(0xFFCC88, 0.5);
+    dl.position.set(5, 15, 5); dl.castShadow = true;
+    dl.shadow.mapSize.set(2048, 2048);
+    const ds = 25; dl.shadow.camera.left=-ds; dl.shadow.camera.right=ds;
+    dl.shadow.camera.top=ds; dl.shadow.camera.bottom=-ds; dl.shadow.camera.far=60;
+    dl.shadow.bias=-0.001; this._addLight(dl);
+
+    // Warm point lights from lamps
+    [[-W/2+2, D/2-2], [W/2-2, -D/2+2], [-5, D/2-2]].forEach(([lx, lz]) => {
+      const pl = new THREE.PointLight(0xFF8833, 1.2, 12);
+      pl.position.set(lx, 2.2, lz); this._addLight(pl);
+    });
+
+    this.scene.fog = new THREE.FogExp2(0x1a0a0a, 0.04);
+    this.scene.background = new THREE.Color(0x1a0a0a);
+
+    this.spawnPoints.hider = [
+      {x:-15,y:0,z:10},{x:15,y:0,z:-10},{x:-10,y:0,z:-12},{x:10,y:0,z:12},
+      {x:5,y:0,z:-8},{x:-5,y:0,z:8},{x:0,y:0,z:0},{x:-18,y:0,z:-5},
+      {x:18,y:0,z:5},{x:0,y:0,z:15},{x:0,y:0,z:-15},
+    ];
+    this.spawnPoints.seeker = [{x:0,y:0,z:-D/2+3},{x:5,y:0,z:-D/2+3}];
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // MAP 2: LAUNDRY / BATHROOM ROOM
+  // Black/white checkered floor, deep green floral wallpaper,
+  // sinks, shelving, colored boxes, hanging laundry, warm lamps
+  // ═══════════════════════════════════════════════════════════════════════
+  _buildLaundryRoom() {
+    const W = 46, D = 36, H = 5;
+    const add = m => this._add(m);
+    const addC = c => this._addCol(c);
+
+    const FLOOR_A  = 0x111111;
+    const FLOOR_B  = 0xF0F0F0;
+    const WALL_CLR = 0x2D4A2D; // dark green floral
+    const SINK_WHT = 0xEEEEEE;
+    const SHELF    = 0xC8A050;
+
+    // Checkered floor
+    for (let ix = 0; ix < W; ix++) {
+      for (let iz = 0; iz < D; iz++) {
+        const col = (ix + iz) % 2 === 0 ? FLOOR_A : FLOOR_B;
+        const tile = box(1, 0.05, 1, col, ix - W/2 + 0.5, 0, iz - D/2 + 0.5);
+        tile.receiveShadow = true; tile.castShadow = false; add(tile);
+      }
+    }
+
+    // Walls
+    const wt = 0.2;
+    add(box(W, H, wt, WALL_CLR, 0, H/2, D/2));  addC(collider(W, H, wt, 0, H/2, D/2));
+    add(box(W, H, wt, WALL_CLR, 0, H/2, -D/2)); addC(collider(W, H, wt, 0, H/2, -D/2));
+    add(box(wt, H, D, WALL_CLR, W/2, H/2, 0));  addC(collider(wt, H, D, W/2, H/2, 0));
+    add(box(wt, H, D, WALL_CLR, -W/2, H/2, 0)); addC(collider(wt, H, D, -W/2, H/2, 0));
+    add(box(W, 0.1, D, 0x1E2E1E, 0, H, 0));
+
+    // Porcelain sinks
+    [[-12, D/2-0.6], [0, D/2-0.6], [12, D/2-0.6]].forEach(([sx, sz]) => {
+      add(box(1.4, 0.6, 0.6, SINK_WHT, sx, 1.1, sz));   // basin
+      add(box(1.4, 0.05, 0.65, 0xDDDDDD, sx, 0.85, sz)); // countertop
+      add(box(0.1, 0.85, 0.1, 0x888888, sx-0.55, 0.42, sz));  // leg L
+      add(box(0.1, 0.85, 0.1, 0x888888, sx+0.55, 0.42, sz));  // leg R
+      add(cyl(0.04, 0.04, 0.3, 0xAAAAAA, sx, 1.5, sz-0.15, 8)); // faucet stem
+      add(box(0.25, 0.03, 0.06, 0xAAAAAA, sx, 1.65, sz-0.15)); // faucet spout
+      addC(collider(1.6, 1.7, 0.8, sx, 0.85, sz));
+    });
+
+    // Wall-mounted shelving units
+    [[-W/2+1.5, -8], [-W/2+1.5, 0], [-W/2+1.5, 8]].forEach(([shx, shz]) => {
+      add(box(0.3, 2, 1.5, SHELF, shx, 1, shz));
+      for (let s = 0; s < 3; s++) add(box(0.28, 0.04, 1.4, 0x8A7040, shx, 0.3+s*0.7, shz));
+      addC(collider(0.4, 2.1, 1.6, shx, 1, shz));
+    });
+
+    // Colored storage boxes on shelves
+    const boxColors = [0x4A90D9, 0xF5C842, 0xE8732A, 0xFFFFFF, 0x4A90D9, 0xF5C842, 0xE8732A, 0xDDDDDD];
+    boxColors.forEach((col, i) => {
+      const bx = -W/2+1.5, bz = -8 + (i % 3) * 0.5;
+      const by = 0.5 + Math.floor(i / 3) * 0.6;
+      add(box(0.22, 0.22, 0.44, col, bx, by, bz));
+    });
+
+    // Hanging laundry lines
+    for (let li = 0; li < 3; li++) {
+      const lz = -10 + li * 10;
+      add(box(W*0.6, 0.03, 0.03, 0x888888, 0, H-0.5, lz)); // line
+      const clothColors = [0xCC2244, 0x2244CC, 0xFFCC22, 0x22CC44, 0xCC22CC];
+      for (let ci = 0; ci < 5; ci++) {
+        const cx = -W*0.25 + ci * W*0.12;
+        add(box(0.5, 0.7, 0.05, clothColors[ci], cx, H-0.9, lz));
+      }
+    }
+
+    // Wall lamps
+    [[-10, D/2-0.2, 1.5], [10, D/2-0.2, 1.5], [-15, -D/2+0.2, 1.5], [15, -D/2+0.2, 1.5]].forEach(([lx, lz, ly]) => {
+      add(box(0.15, 0.05, 0.3, 0x555555, lx, H-ly, lz));
+      add(sphere(0.12, mat(0xFF9D4A, { emissive: 0xFF6600, emissiveIntensity: 0.9 }), lx, H-ly+0.1, lz));
+    });
+
+    // Metal towel rack
+    add(box(0.06, 0.06, 2.0, 0x999999, W/2-0.5, 1.6, 0));
+    add(box(0.06, 0.06, 2.0, 0x999999, W/2-0.5, 1.0, 0));
+
+    // Lighting
+    this._addLight(new THREE.HemisphereLight(0xFFEECC, 0x1A2A1A, 0.5));
+    const dl = new THREE.DirectionalLight(0xFFCC88, 0.8);
+    dl.position.set(0, 15, 0); dl.castShadow = true;
+    dl.shadow.mapSize.set(2048, 2048);
+    const ds = 25; dl.shadow.camera.left=-ds; dl.shadow.camera.right=ds;
+    dl.shadow.camera.top=ds; dl.shadow.camera.bottom=-ds; dl.shadow.camera.far=50;
+    this._addLight(dl);
+
+    [[-10, D/2-0.2, H-1.5], [10, D/2-0.2, H-1.5], [-15, -D/2+0.2, H-1.5], [15, -D/2+0.2, H-1.5]].forEach(([lx, lz, ly]) => {
+      const pl = new THREE.PointLight(0xFFAA55, 0.9, 10);
+      pl.position.set(lx, ly, lz); this._addLight(pl);
+    });
+
+    this.scene.fog = new THREE.Fog(0x1A2A1A, 20, 55);
+    this.scene.background = new THREE.Color(0x1A2A1A);
+
+    this.spawnPoints.hider = [
+      {x:-15,y:0,z:10},{x:15,y:0,z:-10},{x:0,y:0,z:8},{x:0,y:0,z:-8},
+      {x:-10,y:0,z:-10},{x:10,y:0,z:10},{x:-18,y:0,z:0},{x:18,y:0,z:0},
+      {x:-8,y:0,z:0},{x:8,y:0,z:0},
+    ];
+    this.spawnPoints.seeker = [{x:0,y:0,z:-D/2+3}];
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // MAP 3: INDUSTRIAL KITCHEN
+  // Stone/concrete floor, exposed stone walls, large metal sinks,
+  // metal tables, grey/blue ambient lighting
+  // ═══════════════════════════════════════════════════════════════════════
+  _buildIndustrialKitchen() {
+    const W = 48, D = 38, H = 5;
+    const add = m => this._add(m);
+    const addC = c => this._addCol(c);
+
+    const STONE    = 0x808080;
+    const DARK_ST  = 0x4A4A4A;
+    const STEEL    = 0xC0C0C0;
+    const DARK_WALL= 0x3A3A4A;
+
+    // Stone tile floor
+    const stoneMat = canvasMat((ctx, s) => {
+      ctx.fillStyle = '#808080';
+      ctx.fillRect(0, 0, s, s);
+      ctx.strokeStyle = '#5a5a5a';
+      ctx.lineWidth = 3;
+      const gs = s / 4;
+      for (let i = 0; i <= 4; i++) {
+        ctx.beginPath(); ctx.moveTo(i*gs, 0); ctx.lineTo(i*gs, s); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, i*gs); ctx.lineTo(s, i*gs); ctx.stroke();
+      }
+    }, 256, { roughness: 0.95, metalness: 0 });
+    stoneMat.map.repeat.set(8, 6);
+    const floor = new THREE.Mesh(new THREE.BoxGeometry(W, 0.1, D), stoneMat);
+    floor.position.set(0, 0, 0); floor.receiveShadow = true; add(floor);
+
+    // Walls
+    const wt = 0.3;
+    [
+      [W, H, wt, 0, H/2, D/2], [W, H, wt, 0, H/2, -D/2],
+      [wt, H, D, W/2, H/2, 0], [wt, H, D, -W/2, H/2, 0],
+    ].forEach(([w, h, d, x, y, z]) => {
+      add(box(w, h, d, DARK_WALL, x, y, z));
+      addC(collider(w, h, d, x, y, z));
+    });
+    add(box(W, 0.1, D, 0x2A2A3A, 0, H, 0));
+
+    // Large industrial double-basin sinks
+    [[-12, D/2-0.9], [0, D/2-0.9], [12, D/2-0.9]].forEach(([sx, sz]) => {
+      // Counter
+      add(box(2.4, 0.08, 1.0, STEEL, sx, 0.92, sz));
+      // Basin 1
+      add(box(0.9, 0.35, 0.75, STEEL, sx-0.6, 0.78, sz));
+      // Basin 2
+      add(box(0.9, 0.35, 0.75, STEEL, sx+0.6, 0.78, sz));
+      // Legs
+      [-1, 1].forEach(s => add(box(0.08, 0.92, 0.08, DARK_ST, sx+s*1.1, 0.46, sz-0.4)));
+      [-1, 1].forEach(s => add(box(0.08, 0.92, 0.08, DARK_ST, sx+s*1.1, 0.46, sz+0.4)));
+      // Open under-sink space (hidden from view — good hiding spot)
+      addC(collider(2.5, 1.1, 1.1, sx, 0.55, sz));
+    });
+
+    // Metal prep tables
+    [[-8, -8], [0, -8], [8, -8], [-8, 5], [8, 5]].forEach(([tx, tz]) => {
+      add(box(2, 0.06, 1, STEEL, tx, 1.0, tz));
+      [-0.85, 0.85].forEach(ox => [-0.4, 0.4].forEach(oz => add(box(0.07, 1, 0.07, DARK_ST, tx+ox, 0.5, tz+oz))));
+      addC(collider(2.1, 1.1, 1.1, tx, 0.55, tz));
+    });
+
+    // Shelving racks
+    [[-W/2+1.5, -6], [-W/2+1.5, 6]].forEach(([sx, sz]) => {
+      add(box(0.08, 3, 0.08, DARK_ST, sx, 1.5, sz-0.8));
+      add(box(0.08, 3, 0.08, DARK_ST, sx, 1.5, sz+0.8));
+      for (let r = 0; r < 3; r++) add(box(0.08, 0.05, 1.6, STEEL, sx, 0.5+r*0.9, sz));
+      addC(collider(0.3, 3, 1.8, sx, 1.5, sz));
+    });
+
+    // Lighting — cold grey/blue industrial
+    this._addLight(new THREE.HemisphereLight(0x8899AA, 0x222233, 0.8));
+    const dl = new THREE.DirectionalLight(0xAABBCC, 1.0);
+    dl.position.set(0, 20, 5); dl.castShadow = true;
+    dl.shadow.mapSize.set(2048, 2048);
+    const ds = 28; dl.shadow.camera.left=-ds; dl.shadow.camera.right=ds;
+    dl.shadow.camera.top=ds; dl.shadow.camera.bottom=-ds; dl.shadow.camera.far=55;
+    this._addLight(dl);
+
+    // Fluorescent strip lights
+    [[-10, 0], [0, 0], [10, 0], [-10, -12], [10, -12]].forEach(([lx, lz]) => {
+      const fl = new THREE.PointLight(0xCCDDEE, 0.9, 18);
+      fl.position.set(lx, H-0.3, lz); this._addLight(fl);
+    });
+
+    this.scene.fog = new THREE.Fog(0x2A2A3A, 18, 55);
+    this.scene.background = new THREE.Color(0x2A2A3A);
+
+    this.spawnPoints.hider = [
+      {x:-10,y:0,z:0},{x:10,y:0,z:0},{x:0,y:0,z:-5},{x:-8,y:0,z:D/2-3},
+      {x:8,y:0,z:D/2-3},{x:0,y:0,z:10},{x:-15,y:0,z:-10},{x:15,y:0,z:-10},
+      {x:-5,y:0,z:-12},{x:5,y:0,z:-12},
+    ];
+    this.spawnPoints.seeker = [{x:0,y:0,z:-D/2+3}];
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // MAP 4: SCHOOL / HOSPITAL CORRIDOR
+  // Sterile institutional — bright neon lime/yellow-green walls,
+  // clean flat surfaces, fluorescent lighting, lockers
+  // ═══════════════════════════════════════════════════════════════════════
+  _buildSchoolCorridor() {
+    const W = 52, D = 42, H = 5;
+    const add = m => this._add(m);
+    const addC = c => this._addCol(c);
+
+    const LIME  = 0xBFFF40;
+    const LIME2 = 0xA0E030;
+    const WHITE = 0xFFFFFF;
+    const PALE  = 0xE8E8E8;
+    const GRAY  = 0xBBBBBB;
+
+    // Floor — pale linoleum
+    const floorMat = canvasMat((ctx, s) => {
+      ctx.fillStyle = '#e8e8e8';
+      ctx.fillRect(0, 0, s, s);
+      ctx.strokeStyle = '#cccccc';
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= 4; i++) {
+        ctx.beginPath(); ctx.moveTo(i*(s/4), 0); ctx.lineTo(i*(s/4), s); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, i*(s/4)); ctx.lineTo(s, i*(s/4)); ctx.stroke();
+      }
+    });
+    floorMat.map.repeat.set(10, 8);
+    const floor = new THREE.Mesh(new THREE.BoxGeometry(W, 0.05, D), floorMat);
+    floor.position.set(0, 0, 0); floor.receiveShadow = true; add(floor);
+
+    // Walls — neon lime
+    const wt = 0.2;
+    add(box(W, H, wt, LIME, 0, H/2, D/2));   addC(collider(W, H, wt, 0, H/2, D/2));
+    add(box(W, H, wt, LIME, 0, H/2, -D/2));  addC(collider(W, H, wt, 0, H/2, -D/2));
+    add(box(wt, H, D, LIME2, W/2, H/2, 0));  addC(collider(wt, H, D, W/2, H/2, 0));
+    add(box(wt, H, D, LIME2, -W/2, H/2, 0)); addC(collider(wt, H, D, -W/2, H/2, 0));
+    add(box(W, 0.1, D, WHITE, 0, H, 0));
+
+    // Skirting boards (white strip at base of walls)
+    add(box(W, 0.2, 0.08, WHITE, 0, 0.1, D/2-0.05));
+    add(box(W, 0.2, 0.08, WHITE, 0, 0.1, -D/2+0.05));
+    add(box(0.08, 0.2, D, WHITE, W/2-0.05, 0.1, 0));
+    add(box(0.08, 0.2, D, WHITE, -W/2+0.05, 0.1, 0));
+
+    // Lockers along walls
+    const lockerColors = [0x4499DD, 0xDD4444, 0x44DD44, 0xDDDD44, 0xDD8844, 0x8844DD];
+    for (let l = 0; l < 12; l++) {
+      const col = lockerColors[l % lockerColors.length];
+      const lx = -W/2 + 0.4;
+      const lz = -D/2 + 2 + l * 3;
+      if (lz > D/2 - 1) break;
+      add(box(0.5, 2, 1.5, col, lx, 1, lz));
+      add(box(0.5, 0.03, 1.5, 0x333333, lx, 2.03, lz)); // divider
+      add(box(0.03, 0.06, 0.06, 0xCCCCCC, lx+0.28, 0.9, lz));  // handle
+      add(box(0.03, 0.06, 0.06, 0xCCCCCC, lx+0.28, 2.8, lz));  // handle
+      addC(collider(0.6, 2.1, 1.6, lx, 1.05, lz));
+    }
+    // Right wall lockers
+    for (let l = 0; l < 10; l++) {
+      const col = lockerColors[(l + 3) % lockerColors.length];
+      const lx = W/2 - 0.4;
+      const lz = -D/2 + 2 + l * 3.5;
+      if (lz > D/2 - 1) break;
+      add(box(0.5, 2, 1.5, col, lx, 1, lz));
+      addC(collider(0.6, 2.1, 1.6, lx, 1.05, lz));
+    }
+
+    // Doorframes
+    [[-8, D/2], [8, D/2], [-8, -D/2], [8, -D/2]].forEach(([dx, dz]) => {
+      add(box(0.15, H, 0.15, 0xDDDDDD, dx-1.1, H/2, dz));
+      add(box(0.15, H, 0.15, 0xDDDDDD, dx+1.1, H/2, dz));
+      add(box(2.2, 0.15, 0.15, 0xDDDDDD, dx, H-0.5, dz));
+    });
+
+    // Notice boards on walls
+    add(box(2, 1.2, 0.1, 0x886633, 0, 2.5, D/2-0.15));
+    add(box(1.8, 1.0, 0.06, 0xF5F5DC, 0, 2.5, D/2-0.1));
+
+    // Fluorescent ceiling lights
+    for (let li = -2; li <= 2; li++) {
+      add(box(0.15, 0.06, 3, WHITE, li*8, H-0.05, 0));
+    }
+
+    // Lighting — very bright, sterile white
+    this._addLight(new THREE.HemisphereLight(0xFFFFFF, 0x88AA44, 1.0));
+    const dl = new THREE.DirectionalLight(0xFFFFFF, 1.2);
+    dl.position.set(0, 20, 0); dl.castShadow = true;
+    dl.shadow.mapSize.set(2048, 2048);
+    const ds = 30; dl.shadow.camera.left=-ds; dl.shadow.camera.right=ds;
+    dl.shadow.camera.top=ds; dl.shadow.camera.bottom=-ds; dl.shadow.camera.far=60;
+    this._addLight(dl);
+
+    [[-16, 0], [0, 0], [16, 0], [-8, 14], [8, 14], [-8, -14], [8, -14]].forEach(([lx, lz]) => {
+      const pl = new THREE.PointLight(0xEEFFCC, 1.0, 20);
+      pl.position.set(lx, H-0.2, lz); this._addLight(pl);
+    });
+
+    this.scene.fog = new THREE.Fog(0xBFFF40, 25, 60);
+    this.scene.background = new THREE.Color(0xC8FF50);
+
+    this.spawnPoints.hider = [
+      {x:-15,y:0,z:12},{x:15,y:0,z:-12},{x:0,y:0,z:15},{x:0,y:0,z:-15},
+      {x:-10,y:0,z:0},{x:10,y:0,z:0},{x:-5,y:0,z:-8},{x:5,y:0,z:8},
+      {x:-18,y:0,z:-5},{x:18,y:0,z:5},
+    ];
+    this.spawnPoints.seeker = [{x:0,y:0,z:-D/2+4}];
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // MAP 5: TOY STABLE / FARM STORE
+  // Bright green carpet floor, white wooden fences, large brown horse statues,
+  // teal walls, yellow accents, red barn element
+  // ═══════════════════════════════════════════════════════════════════════
+  _buildToyStable() {
+    const W = 54, D = 44, H = 5;
+    const add = m => this._add(m);
+    const addC = c => this._addCol(c);
+
+    const GRASS = 0x2ECC40;
+    const TEAL  = 0x008B8B;
+    const FENCE = 0xFFFFFF;
+    const HORSE = 0x8B4513;
+    const GOLD  = 0xFFD700;
+    const BARN  = 0xCC2200;
+    const PLAT  = 0xC4A484;
+
+    // Green carpet floor
+    const gMat = mat(GRASS, { roughness: 0.9 });
+    const floor = new THREE.Mesh(new THREE.BoxGeometry(W, 0.1, D), gMat);
+    floor.position.set(0, 0, 0); floor.receiveShadow = true; add(floor);
+
+    // Walls — teal/turquoise
+    const wt = 0.2;
+    add(box(W, H, wt, TEAL, 0, H/2, D/2));   addC(collider(W, H, wt, 0, H/2, D/2));
+    add(box(W, H, wt, TEAL, 0, H/2, -D/2));  addC(collider(W, H, wt, 0, H/2, -D/2));
+    add(box(wt, H, D, TEAL, W/2, H/2, 0));   addC(collider(wt, H, D, W/2, H/2, 0));
+    add(box(wt, H, D, TEAL, -W/2, H/2, 0));  addC(collider(wt, H, D, -W/2, H/2, 0));
+    add(box(W, 0.1, D, 0xDDDDDD, 0, H, 0));
+
+    // Red barn graphic / accent on back wall
+    add(box(10, 4, 0.1, BARN, 0, 2.5, D/2-0.15));
+    add(box(0.3, 4, 0.1, FENCE, -5, 2.5, D/2-0.1));
+    add(box(0.3, 4, 0.1, FENCE, 5, 2.5, D/2-0.1));
+    add(box(10, 0.3, 0.1, FENCE, 0, 4.65, D/2-0.1)); // roof line
+
+    // White fence structures (ranch style)
+    const fencePost = (x, y, z, h = 1.2, rotY = 0) => {
+      add(box(0.1, h, 0.1, FENCE, x, h/2, z, rotY));
+    };
+    const fenceRail = (x, z, len, rotY = 0) => {
+      add(box(len, 0.08, 0.08, FENCE, x, 0.5, z, rotY));
+      add(box(len, 0.08, 0.08, FENCE, x, 0.9, z, rotY));
+    };
+
+    // Fence sections forming paddock areas
+    for (let fi = -3; fi <= 3; fi++) { fencePost(fi*4, 0, -D/2+4); }
+    fenceRail(0, -D/2+4, 25);
+    for (let fi = -3; fi <= 3; fi++) { fencePost(fi*4, 0, D/2-4); }
+    fenceRail(0, D/2-4, 25);
+    for (let fi = -2; fi <= 2; fi++) { fencePost(-W/2+4, 0, fi*4); }
+    fenceRail(-W/2+4, 0, 17, Math.PI/2);
+
+    // Horse statues on wooden platforms (4+ large brown horses)
+    const horseAt = (hx, hz, rx = 0) => {
+      // Platform
+      add(box(2, 0.15, 2, PLAT, hx, 0.08, hz));
+      addC(collider(2.1, 0.15, 2.1, hx, 0.08, hz));
+      // Body
+      add(box(0.7, 0.8, 1.4, HORSE, hx, 1.0, hz, rx));
+      // Head+neck (offset)
+      const hn = hz + 0.8 * Math.cos(rx);
+      const hny = 1.45;
+      add(box(0.35, 0.55, 0.6, HORSE, hx, hny, hn));
+      // Legs x4
+      [-0.25, 0.25].forEach(ox => [-0.45, 0.45].forEach(oz => {
+        add(box(0.14, 0.7, 0.14, HORSE, hx+ox, 0.5, hz+oz));
+      }));
+      // Tail
+      add(box(0.1, 0.5, 0.08, 0x3A1F0A, hx, 1.0, hz - 0.75));
+      addC(collider(0.8, 2, 1.6, hx, 1.0, hz));
+    };
+
+    horseAt(-14, -8); horseAt(14, -8); horseAt(-14, 8); horseAt(14, 8);
+    horseAt(-6, 14); horseAt(6, 14);
+
+    // Yellow signs and accents
+    add(box(2, 0.8, 0.1, GOLD, -W/2+3, 2, 0));
+    add(box(2, 0.8, 0.1, GOLD, W/2-3, 2, 0));
+    add(box(0.1, 3, 0.1, FENCE, -W/2+2, 1.5, 5));
+    add(box(0.1, 3, 0.1, FENCE, -W/2+2, 1.5, -5));
+
+    // Haybales
+    [[-20, -15], [20, 15], [-20, 15]].forEach(([bx, bz]) => {
+      add(cyl(0.6, 0.6, 1.0, 0xD4A843, bx, 0.6, bz, 16));
+      addC(collider(1.3, 1.2, 1.3, bx, 0.6, bz));
+    });
+
+    // Lighting — bright, sunny outdoor feel
+    this._addLight(new THREE.HemisphereLight(0xFFFFDD, 0x224422, 0.8));
+    const dl = new THREE.DirectionalLight(0xFFFFDD, 1.3);
+    dl.position.set(10, 20, 10); dl.castShadow = true;
+    dl.shadow.mapSize.set(2048, 2048);
+    const ds = 32; dl.shadow.camera.left=-ds; dl.shadow.camera.right=ds;
+    dl.shadow.camera.top=ds; dl.shadow.camera.bottom=-ds; dl.shadow.camera.far=65;
+    this._addLight(dl);
+
+    this.scene.fog = new THREE.Fog(0x44CC66, 30, 70);
+    this.scene.background = new THREE.Color(0x55DDAA);
+
+    this.spawnPoints.hider = [
+      {x:-10,y:0,z:0},{x:10,y:0,z:0},{x:0,y:0,z:10},{x:0,y:0,z:-10},
+      {x:-18,y:0,z:-18},{x:18,y:0,z:18},{x:-5,y:0,z:18},{x:5,y:0,z:-18},
+      {x:0,y:0,z:0},{x:-18,y:0,z:8},
+    ];
+    this.spawnPoints.seeker = [{x:0,y:0,z:-D/2+4},{x:8,y:0,z:-D/2+4}];
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // MAP 6: CLOWN / BALL PARTY ROOM
+  // Playful chaos — giant balloons everywhere, bold saturated colors,
+  // "HUNTER" text on floor, oversized cartoon shapes
+  // ═══════════════════════════════════════════════════════════════════════
+  _buildClownParty() {
+    const W = 60, D = 50, H = 6;
+    const add = m => this._add(m);
+    const addC = c => this._addCol(c);
+
+    const RED    = 0xE74C3C;
+    const BLUE   = 0x3498DB;
+    const PURPLE = 0x9B59B6;
+    const YELLOW = 0xF1C40F;
+    const GREEN  = 0x2ECC71;
+    const WHITE  = 0xFFFFFF;
+
+    // Floor — bold red/checker pattern
+    for (let ix = 0; ix < W; ix++) {
+      for (let iz = 0; iz < D; iz++) {
+        const col = (ix + iz) % 4 < 2 ? RED : 0xAA1111;
+        const tile = box(1, 0.05, 1, col, ix - W/2 + 0.5, 0, iz - D/2 + 0.5);
+        tile.receiveShadow = true; tile.castShadow = false; add(tile);
+      }
+    }
+
+    // "HUNTER" written on floor in huge white letters (simplified as white boxes)
+    const letterW = 1.0, letterH = 0.08, letterD = 3.5;
+    const letters = [-12, -6, 0, 6, 12, 16]; // H U N T E R positions
+    letters.forEach(lx => {
+      add(box(letterW, letterH, letterD, WHITE, lx, 0.06, 0));
+      add(box(letterW * 0.8, letterH, letterW, WHITE, lx, 0.06, -letterD/2 + 0.5));
+      add(box(letterW * 0.8, letterH, letterW, WHITE, lx, 0.06, letterD/2 - 0.5));
+    });
+
+    // Walls — multicolor bold
+    const wallCols = [RED, BLUE, YELLOW, PURPLE];
+    const wt = 0.2;
+    add(box(W, H, wt, wallCols[0], 0, H/2, D/2));   addC(collider(W, H, wt, 0, H/2, D/2));
+    add(box(W, H, wt, wallCols[1], 0, H/2, -D/2));  addC(collider(W, H, wt, 0, H/2, -D/2));
+    add(box(wt, H, D, wallCols[2], W/2, H/2, 0));   addC(collider(wt, H, D, W/2, H/2, 0));
+    add(box(wt, H, D, wallCols[3], -W/2, H/2, 0));  addC(collider(wt, H, D, -W/2, H/2, 0));
+    add(box(W, 0.1, D, WHITE, 0, H, 0));
+
+    // Giant balloons of various sizes scattered everywhere
+    const balloonData = [
+      [BLUE, -20, 1.8, 15, 1.8], [PURPLE, 18, 2.5, -10, 2.5],
+      [RED, 8, 1.5, 20, 1.5], [GREEN, -15, 3, -18, 3],
+      [YELLOW, 22, 2, 5, 2], [BLUE, -5, 3.5, -22, 3.5],
+      [RED, 0, 2, 12, 2], [PURPLE, -22, 1.8, 8, 1.8],
+      [GREEN, 14, 1.2, -6, 1.2], [YELLOW, -8, 2.5, -8, 2.5],
+      // ceiling balloons
+      [RED, -18, H-1, -12, 1.2], [BLUE, 10, H-1, 18, 1.0],
+      [GREEN, -6, H-0.8, 20, 1.3], [YELLOW, 20, H-0.9, -18, 0.9],
+    ];
+
+    balloonData.forEach(([col, bx, by, bz, r]) => {
+      add(sphere(r, col, bx, by, bz));
+      // String
+      if (by < H - 1) add(cyl(0.015, 0.015, by, WHITE, bx, by/2, bz, 4));
+      if (r > 1.2) addC(collider(r*2.2, r*2.2, r*2.2, bx, by, bz));
+    });
+
+    // Confetti streamers
+    const streamCols = [RED, BLUE, YELLOW, GREEN, PURPLE, WHITE];
+    for (let s = 0; s < 15; s++) {
+      const sx = -W/2 + 2 + s * (W-4)/14;
+      const sz = Math.sin(s*1.5)*8;
+      const sLen = 1.5 + Math.random()*2;
+      add(box(0.06, sLen, 0.06, streamCols[s % streamCols.length], sx, H-sLen/2, sz));
+    }
+
+    // Lighting — super vibrant
+    this._addLight(new THREE.HemisphereLight(0xFFFFFF, 0x441122, 0.8));
+    const dl = new THREE.DirectionalLight(0xFFFFFF, 1.3);
+    dl.position.set(5, 20, 5); dl.castShadow = true;
+    dl.shadow.mapSize.set(2048, 2048);
+    const ds = 35; dl.shadow.camera.left=-ds; dl.shadow.camera.right=ds;
+    dl.shadow.camera.top=ds; dl.shadow.camera.bottom=-ds; dl.shadow.camera.far=65;
+    this._addLight(dl);
+
+    const ptCols = [0xFF6B6B, 0x4ECDC4, 0xFFE66D, 0xA29BFE];
+    ptCols.forEach((col, i) => {
+      const pl = new THREE.PointLight(col, 0.9, 30);
+      const a = (i / ptCols.length) * Math.PI * 2;
+      pl.position.set(Math.cos(a)*20, 3, Math.sin(a)*18);
+      this._addLight(pl);
+    });
+
+    this.scene.fog = new THREE.Fog(0x111111, 28, 70);
+    this.scene.background = new THREE.Color(0x222222);
+
+    this.spawnPoints.hider = [
+      {x:-15,y:0,z:12},{x:15,y:0,z:-12},{x:0,y:0,z:18},{x:0,y:0,z:-18},
+      {x:-22,y:0,z:0},{x:22,y:0,z:0},{x:-8,y:0,z:-8},{x:8,y:0,z:8},
+      {x:0,y:0,z:0},{x:-18,y:0,z:-18},{x:18,y:0,z:18},
+    ];
+    this.spawnPoints.seeker = [{x:0,y:0,z:-D/2+4},{x:-5,y:0,z:-D/2+4}];
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // MAP 7: PENGUIN HOTEL ROOM
+  // Deep blue diamond wallpaper, "PENGUIN HOTEL" cardboard boxes,
+  // colorful plush toy characters, yellow hula hoops, stacked clutter
+  // ═══════════════════════════════════════════════════════════════════════
+  _buildPenguinHotel() {
+    const W = 48, D = 40, H = 5;
+    const add = m => this._add(m);
+    const addC = c => this._addCol(c);
+
+    const WALL_BLUE  = 0x1A3A6E;
+    const CARDBOARD  = 0xD4A860;
+    const RED_PLUSH  = 0xE74C3C;
+    const BLUE_PLUSH = 0x3498DB;
+    const YEL_PLUSH  = 0xF1C40F;
+    const HOOP_YEL   = 0xFFD700;
+    const FLOOR      = 0x3A2A1A;
+
+    // Dark wood floor
+    const floor = new THREE.Mesh(new THREE.BoxGeometry(W, 0.1, D), mat(FLOOR, { roughness: 0.8 }));
+    floor.position.set(0, 0, 0); floor.receiveShadow = true; add(floor);
+
+    // Walls — deep blue with diamond pattern (simulated with darker blue)
+    const wt = 0.2;
+    add(box(W, H, wt, WALL_BLUE, 0, H/2, D/2));   addC(collider(W, H, wt, 0, H/2, D/2));
+    add(box(W, H, wt, WALL_BLUE, 0, H/2, -D/2));  addC(collider(W, H, wt, 0, H/2, -D/2));
+    add(box(wt, H, D, WALL_BLUE, W/2, H/2, 0));   addC(collider(wt, H, D, W/2, H/2, 0));
+    add(box(wt, H, D, WALL_BLUE, -W/2, H/2, 0));  addC(collider(wt, H, D, -W/2, H/2, 0));
+    add(box(W, 0.1, D, 0x0D2244, 0, H, 0));
+
+    // Diamond wallpaper pattern (lighter blue dots on walls)
+    const diamondPositions = [
+      [-10, 2.5, D/2-0.1], [0, 2.5, D/2-0.1], [10, 2.5, D/2-0.1],
+      [-15, 1.5, D/2-0.1], [-5, 1.5, D/2-0.1], [5, 1.5, D/2-0.1], [15, 1.5, D/2-0.1],
+    ];
+    diamondPositions.forEach(([dx, dy, dz]) => {
+      add(box(0.4, 0.4, 0.05, 0x2A5A9E, dx, dy, dz));
+      add(box(0.6, 0.05, 0.05, 0x2A5A9E, dx, dy, dz));
+      add(box(0.05, 0.6, 0.05, 0x2A5A9E, dx, dy, dz));
+    });
+
+    // Stacked cardboard boxes "PENGUIN HOTEL" 
+    const boxStacks = [
+      {x:-14, z:10, cols:[CARDBOARD,CARDBOARD,0xBB9050]},
+      {x:12,  z:-8, cols:[CARDBOARD,0xBB9050,CARDBOARD]},
+      {x:-8,  z:-12,cols:[0xBB9050,CARDBOARD,CARDBOARD]},
+      {x:16,  z:12, cols:[CARDBOARD,CARDBOARD,CARDBOARD]},
+      {x:-18, z:-5, cols:[CARDBOARD,0xBB9050,0xBB9050]},
+    ];
+    boxStacks.forEach(({x, z, cols}) => {
+      cols.forEach((col, i) => {
+        const s = 0.9 - i*0.1;
+        add(box(s*1.4, s, s*1.0, col, x, s/2 + i*0.85, z));
+      });
+      addC(collider(1.5, 2.7, 1.1, x, 1.35, z));
+    });
+
+    // Colorful plush toy characters (round soft shapes)
+    const plushData = [
+      [RED_PLUSH, -10, 0, 8], [BLUE_PLUSH, 10, 0, -6],
+      [YEL_PLUSH, -6, 0, -10], [RED_PLUSH, 14, 0, 10],
+      [BLUE_PLUSH, -18, 0, -10], [YEL_PLUSH, 6, 0, 16],
+    ];
+    plushData.forEach(([col, px, py, pz]) => {
+      // Round body
+      add(sphere(0.7, col, px, py + 0.7, pz));
+      // Small head
+      add(sphere(0.35, col, px, py + 1.6, pz));
+      // Small arms
+      add(sphere(0.18, mat(col, {}), px - 0.75, py + 0.8, pz));
+      add(sphere(0.18, mat(col, {}), px + 0.75, py + 0.8, pz));
+      addC(collider(1.4, 2.0, 1.4, px, py + 1.0, pz));
+    });
+
+    // Yellow hula hoops — some on walls, some on floor
+    [[-12, 2.5, D/2-0.2], [8, 2.5, -D/2+0.2], [W/2-0.2, 2.5, 5]].forEach(([hx, hy, hz]) => {
+      const hoopG = new THREE.TorusGeometry(0.5, 0.06, 8, 32);
+      const hoop = new THREE.Mesh(hoopG, mat(HOOP_YEL, { emissive: HOOP_YEL, emissiveIntensity: 0.3 }));
+      hoop.position.set(hx, hy, hz);
+      hoop.castShadow = true; add(hoop);
+    });
+    // Floor hoops
+    [[4, 0.06, -5], [-4, 0.06, 12]].forEach(([hx, hy, hz]) => {
+      const hoopG = new THREE.TorusGeometry(0.6, 0.07, 8, 32);
+      const hoop = new THREE.Mesh(hoopG, mat(HOOP_YEL));
+      hoop.position.set(hx, hy, hz);
+      hoop.rotation.x = Math.PI / 2;
+      hoop.castShadow = true; add(hoop);
+    });
+
+    // Hotel furniture — small ornate bed
+    add(box(2.5, 0.4, 1.5, 0x8B4513, -W/2+3, 0.2, -5));
+    add(box(2.5, 0.6, 0.2, 0xAA6633, -W/2+3, 0.6, -5.65)); // headboard
+    addC(collider(2.6, 1, 1.6, -W/2+3, 0.5, -5));
+
+    // Lighting — moody hotel with warm pockets
+    this._addLight(new THREE.HemisphereLight(0x4466AA, 0x0A1A33, 0.6));
+    const dl = new THREE.DirectionalLight(0x8899CC, 0.8);
+    dl.position.set(-5, 15, 5); dl.castShadow = true;
+    dl.shadow.mapSize.set(2048, 2048);
+    const ds = 28; dl.shadow.camera.left=-ds; dl.shadow.camera.right=ds;
+    dl.shadow.camera.top=ds; dl.shadow.camera.bottom=-ds; dl.shadow.camera.far=55;
+    this._addLight(dl);
+
+    // Warm hotel room accent lights
+    const pl1 = new THREE.PointLight(0xFFCC88, 1.2, 20); pl1.position.set(-W/2+3, 2, 0); this._addLight(pl1);
+    const pl2 = new THREE.PointLight(0x8899FF, 0.8, 25); pl2.position.set(W/2-3, 3, 0);  this._addLight(pl2);
+    const pl3 = new THREE.PointLight(0xFFAA44, 0.9, 15); pl3.position.set(0, 2.5, D/2-3); this._addLight(pl3);
+
+    this.scene.fog = new THREE.Fog(0x0D1A33, 20, 55);
+    this.scene.background = new THREE.Color(0x0D1A33);
+
+    this.spawnPoints.hider = [
+      {x:-12,y:0,z:10},{x:12,y:0,z:-8},{x:0,y:0,z:12},{x:0,y:0,z:-12},
+      {x:-15,y:0,z:-8},{x:15,y:0,z:8},{x:5,y:0,z:0},{x:-5,y:0,z:0},
+      {x:-18,y:0,z:0},{x:8,y:0,z:14},
+    ];
+    this.spawnPoints.seeker = [{x:0,y:0,z:-D/2+4},{x:6,y:0,z:-D/2+4}];
+  }
 }
+

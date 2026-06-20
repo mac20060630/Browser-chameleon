@@ -13,6 +13,7 @@ import { ParticleSystem } from './ParticleSystem.js';
 import { PoseSystem } from './PoseSystem.js';
 import { TagSystem } from './TagSystem.js';
 import { WeaponModel } from './WeaponModel.js';
+import { DetectionSystem } from './DetectionSystem.js';
 import { audio } from '../utils/AudioManager.js';
 
 export const PHASES = {
@@ -49,6 +50,7 @@ export class GameManager {
     this.poseSystem = null;
     this.tagSystem = null;
     this.weaponModel = null;
+    this.detectionSystem = null;
 
     // Other players
     this.remotePlayers = new Map(); // playerId -> { model: CharacterModel, position, rotation, role, alive }
@@ -161,7 +163,7 @@ export class GameManager {
 
       switch (e.code) {
         case 'KeyF':
-          if (this.phase === PHASES.PREP && this.role === 'hider') {
+          if (this.role === 'hider') {
             e.preventDefault();
             this.ui.paintTool.toggle();
             if (this.ui.paintTool.isVisible()) {
@@ -199,6 +201,17 @@ export class GameManager {
             e.preventDefault();
             this.tagSystem?.tryTag();
           }
+          break;
+
+        // Surface embedding (hider only)
+        case 'KeyU':
+          if (this.role === 'hider') this.playerController?.moveUp();
+          break;
+        case 'KeyJ':
+          if (this.role === 'hider') this.playerController?.moveDown();
+          break;
+        case 'KeyN':
+          if (this.role === 'hider') this.playerController?.detach();
           break;
 
         case 'Escape':
@@ -353,28 +366,27 @@ export class GameManager {
   _startPrepPhase() {
     this.phase = PHASES.PREP;
 
-    // Show game HUD
     this.ui.hud.show();
     this.ui.hud.setPhase('preparation');
     this.ui.hud.setRole(this.role);
     this.ui.hud.setTimer(this.timeRemaining);
     this.ui.hud.showControls(this.role, 'preparation');
     this.ui.hud.showCrosshair();
-    this.ui.hud.hideRemaining(); // Remaining count only shown in hunt
+    this.ui.hud.hideRemaining();
 
-    // Sidebar and weapon are shown for hiders only
     if (this.role === 'hider') {
       this.ui.hud.showSidebar();
-      this.weaponModel?.show();
+      this.weaponModel?.hide();
+      // Hiders in third-person during prep
+      this.playerController?.setFirstPerson(false);
     } else {
       this.ui.hud.hideSidebar();
       this.weaponModel?.hide();
+      // Seekers wait during prep — camera off until hunt
     }
 
-    // Update life/seeker icons
     this._updateAliveCount();
 
-    // Enable movement for hiders
     if (this.playerController) {
       this.playerController.setCanMove(true);
       this.playerController.requestPointerLock();
@@ -386,40 +398,46 @@ export class GameManager {
 
     this.ui.hud.setPhase('hunt');
     this.ui.hud.setTimer(this.timeRemaining);
-    this.ui.hud.hideSidebar();  // Sidebar hidden for all in hunt
+    this.ui.hud.hideSidebar();
     this._updateAliveCount();
 
     if (this.role === 'hider') {
-      // Freeze hider — they've committed to their pose
-      if (this.playerController) {
-        this.playerController.setCanMove(false);
-      }
-      // Close paint/pose menus
+      // Per spec: hiders CAN still move during hunt — they are NOT frozen.
+      // Close paint/pose menus but keep movement enabled.
       this.ui.paintTool.hide();
       this.ui.poseMenu.hide();
       this.paintSystem?.deactivate();
-      this.ui.hud.hideControls();
-      this.ui.hud.hideCrosshair();
-      this.ui.hud.hideRemaining();
       this.weaponModel?.hide();
-    } else {
-      // Seeker: enable movement and tag system
-      this.ui.hud.show();
-      this.ui.hud.showControls(this.role, 'hunt');
-      this.ui.hud.showCrosshair();
-      this.ui.hud.showRemaining(); // Show 残り人数 for seekers
-      this.weaponModel?.hide();    // No weapon for seekers (they carry a flashlight conceptually)
 
+      // Switch to third-person for hider
       if (this.playerController) {
+        this.playerController.setFirstPerson(false);
         this.playerController.setCanMove(true);
         this.playerController.requestPointerLock();
       }
+
+      this.ui.hud.show();
+      this.ui.hud.showControls(this.role, 'hunt');
+      this.ui.hud.hideCrosshair();
+      this.ui.hud.hideRemaining();
+    } else {
+      // Seeker: first-person FPS view + tag system
+      if (this.playerController) {
+        this.playerController.setFirstPerson(true);
+        this.playerController.setCanMove(true);
+        this.playerController.requestPointerLock();
+      }
+
+      this.ui.hud.show();
+      this.ui.hud.showControls(this.role, 'hunt');
+      this.ui.hud.showCrosshair();
+      this.ui.hud.showRemaining();
+      this.weaponModel?.show();
 
       // Activate tag system
       if (this.tagSystem) {
         this.tagSystem.activate(this.playerId, 'seeker');
 
-        // Build player map for tag system
         const playerMap = new Map();
         for (const [id, rp] of this.remotePlayers) {
           playerMap.set(id, {
@@ -730,15 +748,10 @@ export class GameManager {
       if (!this.playerController) return;
       if (this.phase !== PHASES.PREP && this.phase !== PHASES.HUNT) return;
 
-      // Only send if moving (hiders can move in prep, seekers in hunt)
-      const canSend = (this.role === 'hider' && this.phase === PHASES.PREP) ||
-                      (this.role === 'seeker' && this.phase === PHASES.HUNT);
-
-      if (canSend) {
-        const pos = this.playerController.getPosition();
-        const rot = this.playerController.getRotation();
-        this.network.sendMove(pos, { y: rot });
-      }
+      // Both hiders (in prep AND hunt) and seekers (in hunt) send positions
+      const pos = this.playerController.getPosition();
+      const rot = this.playerController.getRotation();
+      this.network.sendMove(pos, { y: rot });
     }, 50); // 20Hz
   }
 
@@ -914,7 +927,7 @@ export class GameManager {
       if (timerEl) timerEl.textContent = Math.ceil(this.timeRemaining);
     }
 
-    // Smooth remote player interpolation (lerp toward server position)
+    // Smooth remote player interpolation
     for (const [, rp] of this.remotePlayers) {
       if (rp.model && rp.position) {
         const current = rp.model.group.position;
@@ -922,6 +935,18 @@ export class GameManager {
         current.y += (rp.position.y - current.y) * 0.15;
         current.z += (rp.position.z - current.z) * 0.15;
       }
+    }
+
+    // Detection system — runs in hunt phase for hiders
+    if (this.detectionSystem && this.phase === PHASES.HUNT && this.role === 'hider') {
+      const localPos = this.playerController
+        ? new THREE.Vector3(
+            this.playerController.position.x,
+            this.playerController.position.y + 1,
+            this.playerController.position.z
+          )
+        : new THREE.Vector3();
+      this.detectionSystem.update(deltaTime, localPos, this.camera);
     }
   }
 }

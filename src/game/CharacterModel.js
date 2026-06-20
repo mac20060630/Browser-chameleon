@@ -267,7 +267,7 @@ export class CharacterModel {
    * @param {string} _name – unused, reserved for future per-part defaults
    * @returns {{ canvas: HTMLCanvasElement, context: CanvasRenderingContext2D, texture: THREE.CanvasTexture }}
    */
-  _initCanvasTexture(_name) {
+  _initCanvasTexture(name) {
     const canvas = document.createElement('canvas');
     canvas.width = this.textureSize;
     canvas.height = this.textureSize;
@@ -275,6 +275,29 @@ export class CharacterModel {
     const context = canvas.getContext('2d');
     context.fillStyle = '#ffffff';
     context.fillRect(0, 0, this.textureSize, this.textureSize);
+
+    // Draw a simple smiley face on the head — two dot eyes + curved smile
+    if (name === 'head') {
+      const s = this.textureSize;
+      const cx = s / 2;
+
+      // Eyes — two dark circles
+      context.fillStyle = '#222222';
+      context.beginPath();
+      context.arc(cx - s * 0.18, s * 0.38, s * 0.06, 0, Math.PI * 2);
+      context.fill();
+      context.beginPath();
+      context.arc(cx + s * 0.18, s * 0.38, s * 0.06, 0, Math.PI * 2);
+      context.fill();
+
+      // Smile — arc below the eyes
+      context.strokeStyle = '#222222';
+      context.lineWidth = s * 0.045;
+      context.lineCap = 'round';
+      context.beginPath();
+      context.arc(cx, s * 0.46, s * 0.2, 0.2, Math.PI - 0.2);
+      context.stroke();
+    }
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.colorSpace = THREE.SRGBColorSpace;

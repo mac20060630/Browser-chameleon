@@ -1,24 +1,28 @@
 /**
  * PlayerController.js
  *
- * First-person / third-person camera and WASD movement controller for the
- * Browser Chameleon game.
+ * Third-person (hider) / First-person (hunter) camera and WASD movement controller.
  *
  * Features:
  *  • Pointer Lock API for mouse capture
  *  • WASD movement relative to camera yaw
+ *  • C = Crouch, X = Stand Up, Space = Climb (move up)
+ *  • Move Up / Move Down (surface embedding — vertical Y offset)
  *  • Simple AABB collision against an array of collider meshes
- *  • Toggle between first-person and third-person views (V key)
- *  • Movement can be disabled (e.g. when hider is locked in)
+ *  • setFirstPerson(bool) to switch camera mode by role
  */
 import * as THREE from 'three';
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
-const PITCH_LIMIT = THREE.MathUtils.degToRad(85); // ±85°
+const PITCH_LIMIT        = THREE.MathUtils.degToRad(85);
 const PLAYER_HALF_WIDTH  = 0.3;
 const PLAYER_HEIGHT      = 1.8;
+const CROUCH_HEIGHT      = 0.9;
+const NORMAL_SPEED       = 5.0;
+const CROUCH_SPEED       = 2.5;
+const SURFACE_EMBED_STEP = 0.15; // units per button press
 
 // ---------------------------------------------------------------------------
 // PlayerController
@@ -40,50 +44,42 @@ export class PlayerController {
     this.colliders = colliders;
 
     // -- Tuning ---------------------------------------------------------------
-    /** Movement speed in world-units per second. */
-    this.moveSpeed = 5;
-
-    /** Mouse look sensitivity (radians per pixel). */
-    this.lookSpeed = 0.002;
+    this.moveSpeed   = NORMAL_SPEED;
+    this.lookSpeed   = 0.002;
+    this.thirdPersonDistance = 4;
+    this.thirdPersonHeight   = 2;
 
     // -- State ----------------------------------------------------------------
-    /** World position of the player (feet). */
-    this.position = new THREE.Vector3(0, 0, 0);
+    this.position  = new THREE.Vector3(0, 0, 0);
+    this.rotation  = { yaw: 0, pitch: 0 };
 
-    /** Yaw (Y-axis rotation) and pitch (X-axis rotation) in radians. */
-    this.rotation = { yaw: 0, pitch: 0 };
-
-    /** Whether the camera is behind the character. */
+    /** true = third-person (hider), false = first-person (hunter) */
     this.isThirdPerson = true;
 
-    /** Distance behind the character in third-person mode. */
-    this.thirdPersonDistance = 4;
-
-    /** Height offset above the character in third-person mode. */
-    this.thirdPersonHeight = 2;
-
-    /** Currently pressed movement keys. */
-    this.keys = { w: false, a: false, s: false, d: false };
-
-    /** When false the player cannot move (hider locked in). */
+    /** Whether movement is allowed. */
     this.canMove = true;
 
-    /** Whether the Pointer Lock API is currently active. */
+    /** Whether pointer lock is active. */
     this.isPointerLocked = false;
 
-    // -- Room bounds (set after map is built) --------------------------------
-    /** @type {{ minX: number, maxX: number, minZ: number, maxZ: number }} */
-    this.bounds = { minX: -40.0, maxX: 40.0, minZ: -40.0, maxZ: 40.0 };
+    /** Crouch state. */
+    this.isCrouching = false;
 
-    // -- Internal scratch vectors (avoid per-frame allocation) ----------------
-    this._moveDir = new THREE.Vector3();
-    this._forward = new THREE.Vector3();
-    this._right   = new THREE.Vector3();
+    /** Vertical offset from surface embedding (Move Up/Down). */
+    this.surfaceOffset = 0;
+
+    /** Currently pressed keys. */
+    this.keys = { w: false, a: false, s: false, d: false };
+
+    // -- Room bounds (updated from map) ----------------------------------------
+    this.bounds = { minX: -29.0, maxX: 29.0, minZ: -24.0, maxZ: 24.0 };
+
+    // -- Internal scratch vectors ---------------------------------------------
+    this._moveDir    = new THREE.Vector3();
     this._desiredPos = new THREE.Vector3();
     this._playerBox  = new THREE.Box3();
     this._colliderBox = new THREE.Box3();
 
-    // Set up input listeners
     this._setupListeners();
   }
 
@@ -91,12 +87,16 @@ export class PlayerController {
   // Input
   // -----------------------------------------------------------------------
 
-  /** @private Attach keyboard and pointer-lock listeners. */
   _setupListeners() {
     // -- Keyboard -------------------------------------------------------------
     this._onKeyDown = (/** @type {KeyboardEvent} */ e) => {
       const key = e.key.toLowerCase();
       if (key in this.keys) this.keys[key] = true;
+
+      // Crouch / Stand / Climb
+      if (e.code === 'KeyC') this._setCrouch(true);
+      if (e.code === 'KeyX') this._setCrouch(false);
+      if (e.code === 'Space') { e.preventDefault(); this._climb(); }
     };
 
     this._onKeyUp = (/** @type {KeyboardEvent} */ e) => {
@@ -105,7 +105,7 @@ export class PlayerController {
     };
 
     document.addEventListener('keydown', this._onKeyDown);
-    document.addEventListener('keyup', this._onKeyUp);
+    document.addEventListener('keyup',   this._onKeyUp);
 
     // -- Mouse look -----------------------------------------------------------
     this._onMouseMove = (/** @type {MouseEvent} */ e) => {
@@ -117,7 +117,7 @@ export class PlayerController {
 
     document.addEventListener('mousemove', this._onMouseMove);
 
-    // -- Pointer lock state ---------------------------------------------------
+    // -- Pointer lock ---------------------------------------------------------
     this._onPointerLockChange = () => {
       this.isPointerLocked = (document.pointerLockElement === document.body);
     };
@@ -125,11 +125,6 @@ export class PlayerController {
     document.addEventListener('pointerlockchange', this._onPointerLockChange);
   }
 
-  /**
-   * Request pointer lock on the renderer canvas.
-   * Must be called from a user-gesture handler (e.g. click).
-   * @param {HTMLElement} [element] – defaults to document.body
-   */
   requestPointerLock(element) {
     const el = element || document.body;
     el.requestPointerLock?.();
@@ -139,51 +134,74 @@ export class PlayerController {
   // Update loop
   // -----------------------------------------------------------------------
 
-  /**
-   * Call once per animation frame.
-   * @param {number} deltaTime – seconds since last frame
-   */
   update(deltaTime) {
     if (this.canMove) {
       this._applyMovement(deltaTime);
     }
 
+    // Effective Y = surfaceOffset (can be negative to embed into surfaces)
+    const effectiveY = this.surfaceOffset;
+
     // Sync character mesh to player position / yaw
-    this.character.setPosition(this.position.x, this.position.y, this.position.z);
+    this.character.setPosition(this.position.x, effectiveY, this.position.z);
     this.character.setRotation(this.rotation.yaw + Math.PI);
 
     // Update camera
     if (this.isThirdPerson) {
-      this._updateThirdPerson();
+      this._updateThirdPerson(effectiveY);
     } else {
-      this._updateFirstPerson();
+      this._updateFirstPerson(effectiveY);
     }
+  }
+
+  // -----------------------------------------------------------------------
+  // Crouch / Climb / Surface Embedding
+  // -----------------------------------------------------------------------
+
+  _setCrouch(crouch) {
+    this.isCrouching = crouch;
+    this.moveSpeed   = crouch ? CROUCH_SPEED : NORMAL_SPEED;
+
+    if (this.character) {
+      this.character.setPose(crouch ? 'crouching' : 'standing');
+    }
+  }
+
+  _climb() {
+    // Climb: move surfaceOffset upward (press Space repeatedly to go higher)
+    this.surfaceOffset = Math.min(this.surfaceOffset + SURFACE_EMBED_STEP * 2, 3.0);
+  }
+
+  /** Move body upward into surfaces (embedding). */
+  moveUp() {
+    this.surfaceOffset = Math.min(this.surfaceOffset + SURFACE_EMBED_STEP, 2.0);
+  }
+
+  /** Move body downward into surfaces (embedding). */
+  moveDown() {
+    this.surfaceOffset = Math.max(this.surfaceOffset - SURFACE_EMBED_STEP, -1.5);
+  }
+
+  /** Detach from surface (reset Y offset to 0). */
+  detach() {
+    this.surfaceOffset = 0;
   }
 
   // -----------------------------------------------------------------------
   // Movement
   // -----------------------------------------------------------------------
 
-  /**
-   * Calculate WASD direction relative to yaw, apply speed, test collisions.
-   * @param {number} dt – delta time in seconds
-   * @private
-   */
   _applyMovement(dt) {
     this._moveDir.set(0, 0, 0);
 
-    // Forward / back (camera-relative)
     if (this.keys.w) this._moveDir.z -= 1;
     if (this.keys.s) this._moveDir.z += 1;
-
-    // Strafe
     if (this.keys.a) this._moveDir.x -= 1;
     if (this.keys.d) this._moveDir.x += 1;
 
     if (this._moveDir.lengthSq() === 0) return;
     this._moveDir.normalize();
 
-    // Rotate direction by yaw
     const sinY = Math.sin(this.rotation.yaw);
     const cosY = Math.cos(this.rotation.yaw);
     const mx = this._moveDir.x * cosY - this._moveDir.z * sinY;
@@ -193,20 +211,15 @@ export class PlayerController {
     this._desiredPos.copy(this.position);
     this._desiredPos.x += mx * speed;
     this._desiredPos.z += mz * speed;
-
-    // Keep on ground
     this._desiredPos.y = 0;
 
-    // ---- Collision detection (AABB slide) ----
-    // Try full move first
+    // AABB collision
     if (!this._collidesAt(this._desiredPos.x, this._desiredPos.z)) {
       this.position.copy(this._desiredPos);
     } else {
-      // Try X-only slide
       if (!this._collidesAt(this._desiredPos.x, this.position.z)) {
         this.position.x = this._desiredPos.x;
       }
-      // Try Z-only slide
       if (!this._collidesAt(this.position.x, this._desiredPos.z)) {
         this.position.z = this._desiredPos.z;
       }
@@ -217,31 +230,14 @@ export class PlayerController {
     this.position.z = THREE.MathUtils.clamp(this.position.z, this.bounds.minZ, this.bounds.maxZ);
   }
 
-  /**
-   * Test whether the player AABB at (x, z) overlaps any collider.
-   * @param {number} x
-   * @param {number} z
-   * @returns {boolean}
-   * @private
-   */
   _collidesAt(x, z) {
-    // Build player AABB
-    this._playerBox.min.set(
-      x - PLAYER_HALF_WIDTH,
-      0,
-      z - PLAYER_HALF_WIDTH,
-    );
-    this._playerBox.max.set(
-      x + PLAYER_HALF_WIDTH,
-      PLAYER_HEIGHT,
-      z + PLAYER_HALF_WIDTH,
-    );
+    const h = this.isCrouching ? CROUCH_HEIGHT : PLAYER_HEIGHT;
+    this._playerBox.min.set(x - PLAYER_HALF_WIDTH, 0, z - PLAYER_HALF_WIDTH);
+    this._playerBox.max.set(x + PLAYER_HALF_WIDTH, h, z + PLAYER_HALF_WIDTH);
 
     for (const col of this.colliders) {
       this._colliderBox.setFromObject(col);
-      if (this._playerBox.intersectsBox(this._colliderBox)) {
-        return true;
-      }
+      if (this._playerBox.intersectsBox(this._colliderBox)) return true;
     }
     return false;
   }
@@ -250,58 +246,49 @@ export class PlayerController {
   // Camera modes
   // -----------------------------------------------------------------------
 
-  /** @private Position camera at the character's head looking where pitch/yaw point. */
-  _updateFirstPerson() {
-    const headY = this.position.y + 1.65;
-
+  _updateFirstPerson(baseY = 0) {
+    const headY = baseY + 1.55;
     this.camera.position.set(this.position.x, headY, this.position.z);
 
-    // Build a look-at target from yaw + pitch
-    const lookX = this.position.x + Math.sin(this.rotation.yaw) * Math.cos(this.rotation.pitch) * -1;
-    const lookY = headY + Math.sin(this.rotation.pitch);
-    const lookZ = this.position.z + Math.cos(this.rotation.yaw) * Math.cos(this.rotation.pitch) * -1;
+    const lookX = this.position.x + Math.sin(this.rotation.yaw)   * Math.cos(this.rotation.pitch) * -1;
+    const lookY = headY           + Math.sin(this.rotation.pitch);
+    const lookZ = this.position.z + Math.cos(this.rotation.yaw)   * Math.cos(this.rotation.pitch) * -1;
 
     this.camera.lookAt(lookX, lookY, lookZ);
-
-    // Hide own character in first person so it doesn't block the view
     this.character.group.visible = false;
   }
 
-  /** @private Position camera behind and above the character. */
-  _updateThirdPerson() {
+  _updateThirdPerson(baseY = 0) {
     this.character.group.visible = true;
 
-    const headY = this.position.y + 1.0;
-
-    // Offset behind the character based on yaw and pitch
-    const pitchOffset = Math.sin(this.rotation.pitch) * this.thirdPersonDistance;
+    const focusY    = baseY + 1.0;
+    const pitchOff  = Math.sin(this.rotation.pitch) * this.thirdPersonDistance;
     const horizDist = Math.cos(this.rotation.pitch) * this.thirdPersonDistance;
 
     const camX = this.position.x + Math.sin(this.rotation.yaw) * horizDist;
-    const camY = headY + this.thirdPersonHeight + pitchOffset;
+    const camY = focusY + this.thirdPersonHeight + pitchOff;
     const camZ = this.position.z + Math.cos(this.rotation.yaw) * horizDist;
 
     this.camera.position.set(camX, camY, camZ);
-    this.camera.lookAt(this.position.x, headY, this.position.z);
+    this.camera.lookAt(this.position.x, focusY, this.position.z);
   }
 
   // -----------------------------------------------------------------------
   // Public helpers
   // -----------------------------------------------------------------------
 
-  /** Toggle between first-person and third-person camera. */
+  /** Set camera perspective by role: hiders = third-person, hunters = first-person. */
+  setFirstPerson(fps) {
+    this.isThirdPerson = !fps;
+  }
+
   toggleCamera() {
     this.isThirdPerson = !this.isThirdPerson;
   }
 
-  /**
-   * Enable or disable player movement (e.g. when the hider locks in).
-   * @param {boolean} canMove
-   */
   setCanMove(canMove) {
     this.canMove = canMove;
     if (!canMove) {
-      // Reset pressed keys to avoid stuck movement
       this.keys.w = false;
       this.keys.a = false;
       this.keys.s = false;
@@ -309,39 +296,18 @@ export class PlayerController {
     }
   }
 
-  /**
-   * Get the current world position.
-   * @returns {{ x: number, y: number, z: number }}
-   */
   getPosition() {
     return { x: this.position.x, y: this.position.y, z: this.position.z };
   }
 
-  /**
-   * Get the current yaw angle in radians.
-   * @returns {number}
-   */
   getRotation() {
     return this.rotation.yaw;
   }
 
-  /**
-   * Teleport the player to a specific location.
-   * @param {number} x
-   * @param {number} y
-   * @param {number} z
-   */
   setPosition(x, y, z) {
     this.position.set(x, y, z);
   }
 
-  /**
-   * Set room bounds for position clamping.
-   * @param {number} minX
-   * @param {number} maxX
-   * @param {number} minZ
-   * @param {number} maxZ
-   */
   setBounds(minX, maxX, minZ, maxZ) {
     this.bounds = { minX, maxX, minZ, maxZ };
   }
@@ -350,10 +316,9 @@ export class PlayerController {
   // Cleanup
   // -----------------------------------------------------------------------
 
-  /** Remove all event listeners. */
   dispose() {
     document.removeEventListener('keydown', this._onKeyDown);
-    document.removeEventListener('keyup', this._onKeyUp);
+    document.removeEventListener('keyup',   this._onKeyUp);
     document.removeEventListener('mousemove', this._onMouseMove);
     document.removeEventListener('pointerlockchange', this._onPointerLockChange);
   }
