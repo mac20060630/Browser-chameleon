@@ -1061,7 +1061,7 @@ export class MapBuilder {
   // wooden staircase, ladders, drapes, warm dim lighting
   // ═══════════════════════════════════════════════════════════════════════
   _buildVictorianHouse() {
-    const W = 50, D = 40, H = 6;
+    const W = 50, D = 40, H = 10; // Taller for 2nd floor
     const add = m => this._add(m);
     const addC = c => this._addCol(c);
 
@@ -1072,8 +1072,9 @@ export class MapBuilder {
     const MED_WOOD = 0x5C3D1E;
     const GOLD     = 0xD4AF37;
     const DRAPE    = 0x6B0000;
+    const wt = 0.25;
 
-    // Checkered floor
+    // Checkered floor (Main Floor)
     for (let ix = 0; ix < W; ix++) {
       for (let iz = 0; iz < D; iz++) {
         const col = (ix + iz) % 2 === 0 ? FLOOR_A : FLOOR_B;
@@ -1083,46 +1084,55 @@ export class MapBuilder {
       }
     }
 
-    // Walls — dark red maroon wallpaper
-    const wt = 0.25;
-    add(box(W, H, wt, WALL_CLR, 0, H/2,  D/2));  addC(collider(W, H, wt, 0, H/2,  D/2));
+    // Outer Walls
+    add(box(W, H, wt, WALL_CLR, 0, H/2, D/2));   addC(collider(W, H, wt, 0, H/2, D/2));
     add(box(W, H, wt, WALL_CLR, 0, H/2, -D/2));  addC(collider(W, H, wt, 0, H/2, -D/2));
     add(box(wt, H, D, WALL_CLR, W/2, H/2, 0));   addC(collider(wt, H, D, W/2, H/2, 0));
     add(box(wt, H, D, WALL_CLR, -W/2, H/2, 0));  addC(collider(wt, H, D, -W/2, H/2, 0));
-    add(box(W, 0.15, D, 0x1A1A2A, 0, H, 0));
+    add(box(W, 0.15, D, 0x1A1A2A, 0, H, 0)); // ceiling
 
-    // Wooden staircase — right side
-    for (let s = 0; s < 8; s++) {
-      add(box(3, 0.15, 0.9, MED_WOOD, W/2 - 3, s * 0.4 + 0.2, D/2 - 2 - s * 0.9));
+    // Inner walls - creating a Study room on the left side
+    add(box(wt, H, 15, WALL_CLR, -10, H/2, 12.5)); addC(collider(wt, H, 15, -10, H/2, 12.5)); // vertical wall
+    add(box(15, H, wt, WALL_CLR, -17.5, H/2, 5));  addC(collider(15, H, wt, -17.5, H/2, 5)); // horizontal wall
+    
+    // Study Room Bookshelves (in the enclosed area bottom left)
+    // Left wall of study
+    add(box(2, 4, 10, DARK_WOOD, -W/2+1, 2, 10)); addC(collider(2, 4, 10, -W/2+1, 2, 10));
+    // Back wall of study
+    add(box(10, 4, 2, DARK_WOOD, -18, 2, D/2-1)); addC(collider(10, 4, 2, -18, 2, D/2-1));
+
+    // Second Floor Balcony (Wrap-around U-shape)
+    // Back balcony
+    add(box(W, 0.2, 10, DARK_WOOD, 0, 4, -D/2+5)); addC(collider(W, 0.2, 10, 0, 4, -D/2+5));
+    // Right balcony
+    add(box(10, 0.2, D-10, DARK_WOOD, W/2-5, 4, 5)); addC(collider(10, 0.2, D-10, W/2-5, 4, 5));
+    // Balcony railings
+    add(box(W-10, 1.2, 0.2, MED_WOOD, -5, 4.6, -D/2+10)); addC(collider(W-10, 1.2, 0.2, -5, 4.6, -D/2+10));
+    add(box(0.2, 1.2, D-10, MED_WOOD, W/2-10, 4.6, 5)); addC(collider(0.2, 1.2, D-10, W/2-10, 4.6, 5));
+
+    // Grand Staircase (Center back leading to balcony)
+    for (let s = 0; s < 10; s++) {
+      add(box(6, 0.2, 1.5, MED_WOOD, 0, s * 0.4 + 0.2, -5 - s * 1.5));
+      addC(collider(6, 0.4, 1.5, 0, s * 0.4 + 0.2, -5 - s * 1.5));
     }
-    add(box(0.1, 3.5, 7.5, DARK_WOOD, W/2 - 1.6, 1.75, D/2 - 5.5)); // banister
 
     // Ladders on walls
     [[-W/2+1.5, -5], [-W/2+1.5, 5], [W/2-1.5, -8]].forEach(([lx, lz]) => {
-      add(box(0.06, 3, 0.06, DARK_WOOD, lx, 1.5, lz));
-      add(box(0.06, 3, 0.06, DARK_WOOD, lx + 0.5, 1.5, lz));
-      for (let r = 0; r < 6; r++) add(box(0.5, 0.05, 0.06, MED_WOOD, lx + 0.25, 0.4 + r * 0.5, lz));
+      add(box(0.06, H, 0.06, DARK_WOOD, lx, H/2, lz));
+      add(box(0.06, H, 0.06, DARK_WOOD, lx + 0.5, H/2, lz));
+      for (let r = 0; r < H*2; r++) add(box(0.5, 0.05, 0.06, MED_WOOD, lx + 0.25, 0.4 + r * 0.5, lz));
     });
 
     // Hanging dark drapes on walls
     [[-10, D/2-0.1, 0], [10, D/2-0.1, 0], [-8, -D/2+0.1, 0], [8, -D/2+0.1, 0]].forEach(([dx, dz, _]) => {
-      add(box(1.8, H*0.8, 0.1, DRAPE, dx, H*0.6, dz));
+      add(box(1.8, 5, 0.1, DRAPE, dx, 4, dz));
     });
 
     // Antique frames on walls
-    [[-15, 2.5, D/2-0.15], [0, 3, D/2-0.15], [15, 2.5, D/2-0.15]].forEach(([fx, fy, fz]) => {
+    [[-15, 2.5, D/2-0.15], [0, 3, D/2-0.15], [15, 2.5, D/2-0.15], [-5, 6, -D/2+0.15], [5, 6, -D/2+0.15]].forEach(([fx, fy, fz]) => {
       add(box(1.4, 1.8, 0.08, GOLD, fx, fy, fz));
       add(box(1.0, 1.4, 0.1, DARK_WOOD, fx, fy, fz + 0.05));
     });
-
-    // Tall cabinet
-    add(box(1.5, 3.5, 0.7, DARK_WOOD, -W/2+1.5, 1.75, 8)); addC(collider(1.6, 3.6, 0.8, -W/2+1.5, 1.75, 8));
-
-    // Small table with objects
-    add(box(2, 0.08, 1, MED_WOOD, 5, 0.8, -8));
-    add(cyl(0.08, 0.08, 0.8, DARK_WOOD, 4.1, 0.4, -8.4, 4));
-    add(cyl(0.08, 0.08, 0.8, DARK_WOOD, 5.9, 0.4, -8.4, 4));
-    addC(collider(2.2, 0.9, 1.2, 5, 0.45, -8));
 
     // Oil lamps
     [[-W/2+2, D/2-2], [W/2-2, -D/2+2], [-5, D/2-2]].forEach(([lx, lz]) => {
@@ -1131,16 +1141,12 @@ export class MapBuilder {
       addC(collider(0.4, 2.2, 0.4, lx, 1.1, lz));
     });
 
-    // Gold picture rail along top of walls
-    add(box(W-0.5, 0.08, 0.08, GOLD, 0, H-0.5,  D/2-0.3));
-    add(box(W-0.5, 0.08, 0.08, GOLD, 0, H-0.5, -D/2+0.3));
-
     // Lighting — warm amber oil-lamp style
     this._addLight(new THREE.HemisphereLight(0xFF9944, 0x1A0A00, 0.4));
     const dl = new THREE.DirectionalLight(0xFFCC88, 0.5);
     dl.position.set(5, 15, 5); dl.castShadow = true;
     dl.shadow.mapSize.set(2048, 2048);
-    const ds = 25; dl.shadow.camera.left=-ds; dl.shadow.camera.right=ds;
+    const ds = 30; dl.shadow.camera.left=-ds; dl.shadow.camera.right=ds;
     dl.shadow.camera.top=ds; dl.shadow.camera.bottom=-ds; dl.shadow.camera.far=60;
     dl.shadow.bias=-0.001; this._addLight(dl);
 
@@ -1154,11 +1160,11 @@ export class MapBuilder {
     this.scene.background = new THREE.Color(0x1a0a0a);
 
     this.spawnPoints.hider = [
-      {x:-15,y:0,z:10},{x:15,y:0,z:-10},{x:-10,y:0,z:-12},{x:10,y:0,z:12},
-      {x:5,y:0,z:-8},{x:-5,y:0,z:8},{x:0,y:0,z:0},{x:-18,y:0,z:-5},
-      {x:18,y:0,z:5},{x:0,y:0,z:15},{x:0,y:0,z:-15},
+      {x:-15,y:0,z:10}, {x:15,y:0,z:-10}, {x:-10,y:0,z:-12}, {x:10,y:0,z:12},
+      {x:5,y:4.2,z:-15}, {x:-5,y:4.2,z:-15}, {x:20,y:4.2,z:10}, {x:-20,y:0,z:15},
+      {x:18,y:0,z:5}, {x:0,y:0,z:15}, {x:0,y:0,z:5},
     ];
-    this.spawnPoints.seeker = [{x:0,y:0,z:-D/2+3},{x:5,y:0,z:-D/2+3}];
+    this.spawnPoints.seeker = [{x:0,y:0,z:D/2-3},{x:5,y:0,z:D/2-3}];
   }
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -1167,7 +1173,7 @@ export class MapBuilder {
   // sinks, shelving, colored boxes, hanging laundry, warm lamps
   // ═══════════════════════════════════════════════════════════════════════
   _buildLaundryRoom() {
-    const W = 46, D = 36, H = 5;
+    const W = 46, D = 36, H = 6;
     const add = m => this._add(m);
     const addC = c => this._addCol(c);
 
@@ -1176,6 +1182,7 @@ export class MapBuilder {
     const WALL_CLR = 0x2D4A2D; // dark green floral
     const SINK_WHT = 0xEEEEEE;
     const SHELF    = 0xC8A050;
+    const MACHINE  = 0xCCCCCC;
 
     // Checkered floor
     for (let ix = 0; ix < W; ix++) {
@@ -1186,182 +1193,169 @@ export class MapBuilder {
       }
     }
 
-    // Walls
+    // Outer Walls
     const wt = 0.2;
     add(box(W, H, wt, WALL_CLR, 0, H/2, D/2));  addC(collider(W, H, wt, 0, H/2, D/2));
     add(box(W, H, wt, WALL_CLR, 0, H/2, -D/2)); addC(collider(W, H, wt, 0, H/2, -D/2));
     add(box(wt, H, D, WALL_CLR, W/2, H/2, 0));  addC(collider(wt, H, D, W/2, H/2, 0));
     add(box(wt, H, D, WALL_CLR, -W/2, H/2, 0)); addC(collider(wt, H, D, -W/2, H/2, 0));
-    add(box(W, 0.1, D, 0x1E2E1E, 0, H, 0));
+    add(box(W, 0.1, D, 0x1E2E1E, 0, H, 0)); // ceiling
 
-    // Porcelain sinks
-    [[-12, D/2-0.6], [0, D/2-0.6], [12, D/2-0.6]].forEach(([sx, sz]) => {
-      add(box(1.4, 0.6, 0.6, SINK_WHT, sx, 1.1, sz));   // basin
-      add(box(1.4, 0.05, 0.65, 0xDDDDDD, sx, 0.85, sz)); // countertop
-      add(box(0.1, 0.85, 0.1, 0x888888, sx-0.55, 0.42, sz));  // leg L
-      add(box(0.1, 0.85, 0.1, 0x888888, sx+0.55, 0.42, sz));  // leg R
-      add(cyl(0.04, 0.04, 0.3, 0xAAAAAA, sx, 1.5, sz-0.15, 8)); // faucet stem
-      add(box(0.25, 0.03, 0.06, 0xAAAAAA, sx, 1.65, sz-0.15)); // faucet spout
-      addC(collider(1.6, 1.7, 0.8, sx, 0.85, sz));
-    });
-
-    // Wall-mounted shelving units
-    [[-W/2+1.5, -8], [-W/2+1.5, 0], [-W/2+1.5, 8]].forEach(([shx, shz]) => {
-      add(box(0.3, 2, 1.5, SHELF, shx, 1, shz));
-      for (let s = 0; s < 3; s++) add(box(0.28, 0.04, 1.4, 0x8A7040, shx, 0.3+s*0.7, shz));
-      addC(collider(0.4, 2.1, 1.6, shx, 1, shz));
-    });
-
-    // Colored storage boxes on shelves
-    const boxColors = [0x4A90D9, 0xF5C842, 0xE8732A, 0xFFFFFF, 0x4A90D9, 0xF5C842, 0xE8732A, 0xDDDDDD];
-    boxColors.forEach((col, i) => {
-      const bx = -W/2+1.5, bz = -8 + (i % 3) * 0.5;
-      const by = 0.5 + Math.floor(i / 3) * 0.6;
-      add(box(0.22, 0.22, 0.44, col, bx, by, bz));
-    });
-
-    // Hanging laundry lines
-    for (let li = 0; li < 3; li++) {
-      const lz = -10 + li * 10;
-      add(box(W*0.6, 0.03, 0.03, 0x888888, 0, H-0.5, lz)); // line
-      const clothColors = [0xCC2244, 0x2244CC, 0xFFCC22, 0x22CC44, 0xCC22CC];
-      for (let ci = 0; ci < 5; ci++) {
-        const cx = -W*0.25 + ci * W*0.12;
-        add(box(0.5, 0.7, 0.05, clothColors[ci], cx, H-0.9, lz));
-      }
+    // Raised folding table platform (center)
+    add(box(12, 1.5, 8, SHELF, 0, 0.75, 0)); addC(collider(12, 1.5, 8, 0, 0.75, 0));
+    // Stairs up to folding table
+    for (let s = 0; s < 4; s++) {
+      add(box(4, 0.2, 1, SHELF, 0, s * 0.4 + 0.2, 4.5 + s * 1));
+      addC(collider(4, 0.4, 1, 0, s * 0.4 + 0.2, 4.5 + s * 1));
     }
 
-    // Wall lamps
-    [[-10, D/2-0.2, 1.5], [10, D/2-0.2, 1.5], [-15, -D/2+0.2, 1.5], [15, -D/2+0.2, 1.5]].forEach(([lx, lz, ly]) => {
-      add(box(0.15, 0.05, 0.3, 0x555555, lx, H-ly, lz));
-      add(sphere(0.12, mat(0xFF9D4A, { emissive: 0xFF6600, emissiveIntensity: 0.9 }), lx, H-ly+0.1, lz));
+    // Rows of tall washing machines creating a maze
+    // Row 1 (Left)
+    for (let i = 0; i < 6; i++) {
+      add(box(2, 3, 2, MACHINE, -12, 1.5, -10 + i * 4)); 
+      addC(collider(2, 3, 2, -12, 1.5, -10 + i * 4));
+      // Window on machine
+      add(cyl(0.6, 0.6, 2.1, 0x111111, -12, 1.5, -10 + i * 4));
+    }
+    // Row 2 (Right)
+    for (let i = 0; i < 6; i++) {
+      add(box(2, 3, 2, MACHINE, 12, 1.5, -10 + i * 4)); 
+      addC(collider(2, 3, 2, 12, 1.5, -10 + i * 4));
+      add(cyl(0.6, 0.6, 2.1, 0x111111, 12, 1.5, -10 + i * 4));
+    }
+    // Row 3 (Back)
+    for (let i = 0; i < 4; i++) {
+      add(box(3, 3, 2, MACHINE, -6 + i * 4, 1.5, -14)); 
+      addC(collider(3, 3, 2, -6 + i * 4, 1.5, -14));
+    }
+
+    // Porcelain sinks on the back wall
+    [[-18, -D/2+1], [18, -D/2+1]].forEach(([sx, sz]) => {
+      add(box(2, 0.8, 1.5, SINK_WHT, sx, 1.1, sz));   // basin
+      add(box(2, 0.05, 1.55, 0xDDDDDD, sx, 0.85, sz)); // countertop
+      add(cyl(0.08, 0.08, 0.85, 0xAAAAAA, sx - 0.8, 0.4, sz - 0.5));
+      add(cyl(0.08, 0.08, 0.85, 0xAAAAAA, sx + 0.8, 0.4, sz - 0.5));
+      addC(collider(2.2, 1.4, 1.6, sx, 0.7, sz));
     });
 
-    // Metal towel rack
-    add(box(0.06, 0.06, 2.0, 0x999999, W/2-0.5, 1.6, 0));
-    add(box(0.06, 0.06, 2.0, 0x999999, W/2-0.5, 1.0, 0));
+    // Hanging laundry lines (overhead)
+    [[-10, 8], [-4, 4], [4, -4], [10, -8]].forEach(([lx, lz]) => {
+      add(box(W, 0.02, 0.02, 0xFFFFFF, 0, 4, lz));
+      add(box(0.02, 4, 0.02, 0x555555, lx, 2, lz));
+      // Add a draped sheet
+      add(box(2, 2, 0.05, 0xAADDFF, lx, 3, lz));
+    });
 
-    // Lighting
-    this._addLight(new THREE.HemisphereLight(0xFFEECC, 0x1A2A1A, 0.5));
-    const dl = new THREE.DirectionalLight(0xFFCC88, 0.8);
-    dl.position.set(0, 15, 0); dl.castShadow = true;
+    // Lighting — fluorescent
+    this._addLight(new THREE.HemisphereLight(0xFFFFFF, 0x445544, 0.5));
+    const dl = new THREE.DirectionalLight(0xE0F0FF, 0.6);
+    dl.position.set(-10, 20, -10); dl.castShadow = true;
     dl.shadow.mapSize.set(2048, 2048);
     const ds = 25; dl.shadow.camera.left=-ds; dl.shadow.camera.right=ds;
-    dl.shadow.camera.top=ds; dl.shadow.camera.bottom=-ds; dl.shadow.camera.far=50;
-    this._addLight(dl);
+    dl.shadow.camera.top=ds; dl.shadow.camera.bottom=-ds; dl.shadow.camera.far=60;
+    dl.shadow.bias=-0.001; this._addLight(dl);
 
-    [[-10, D/2-0.2, H-1.5], [10, D/2-0.2, H-1.5], [-15, -D/2+0.2, H-1.5], [15, -D/2+0.2, H-1.5]].forEach(([lx, lz, ly]) => {
-      const pl = new THREE.PointLight(0xFFAA55, 0.9, 10);
-      pl.position.set(lx, ly, lz); this._addLight(pl);
-    });
+    // Warm lamps over sinks
+    this._addLight(new THREE.PointLight(0xFFEEAA, 0.8, 15)).position.set(-18, 4, -D/2+2);
+    this._addLight(new THREE.PointLight(0xFFEEAA, 0.8, 15)).position.set(18, 4, -D/2+2);
 
-    this.scene.fog = new THREE.Fog(0x1A2A1A, 20, 55);
-    this.scene.background = new THREE.Color(0x1A2A1A);
+    this.scene.fog = new THREE.FogExp2(0x1a2a1a, 0.02);
+    this.scene.background = new THREE.Color(0x1a2a1a);
 
     this.spawnPoints.hider = [
-      {x:-15,y:0,z:10},{x:15,y:0,z:-10},{x:0,y:0,z:8},{x:0,y:0,z:-8},
-      {x:-10,y:0,z:-10},{x:10,y:0,z:10},{x:-18,y:0,z:0},{x:18,y:0,z:0},
-      {x:-8,y:0,z:0},{x:8,y:0,z:0},
+      {x:-15,y:0,z:10}, {x:15,y:0,z:-10}, {x:-10,y:0,z:-12}, {x:10,y:0,z:12},
+      {x:5,y:0,z:-8}, {x:-5,y:0,z:8}, {x:0,y:1.6,z:0}, {x:-18,y:0,z:-5},
+      {x:18,y:0,z:5}, {x:0,y:0,z:15}, {x:0,y:0,z:-15},
     ];
-    this.spawnPoints.seeker = [{x:0,y:0,z:-D/2+3}];
+    this.spawnPoints.seeker = [{x:0,y:0,z:D/2-3},{x:5,y:0,z:D/2-3}];
   }
 
   // ═══════════════════════════════════════════════════════════════════════
   // MAP 3: INDUSTRIAL KITCHEN
-  // Stone/concrete floor, exposed stone walls, large metal sinks,
-  // metal tables, grey/blue ambient lighting
   // ═══════════════════════════════════════════════════════════════════════
   _buildIndustrialKitchen() {
-    const W = 48, D = 38, H = 5;
+    const W = 55, D = 35, H = 7;
     const add = m => this._add(m);
     const addC = c => this._addCol(c);
 
-    const STONE    = 0x808080;
-    const DARK_ST  = 0x4A4A4A;
-    const STEEL    = 0xC0C0C0;
-    const DARK_WALL= 0x3A3A4A;
+    const FLOOR_CLR= 0x4A4A4A;
+    const WALL_WHT = 0xEEEEEE;
+    const STEEL    = 0xAAAAAA;
+    const STOVE_BLK= 0x111111;
+    const FREEZER  = 0x88CCFF;
 
-    // Stone tile floor
-    const stoneMat = canvasMat((ctx, s) => {
-      ctx.fillStyle = '#808080';
-      ctx.fillRect(0, 0, s, s);
-      ctx.strokeStyle = '#5a5a5a';
-      ctx.lineWidth = 3;
-      const gs = s / 4;
-      for (let i = 0; i <= 4; i++) {
-        ctx.beginPath(); ctx.moveTo(i*gs, 0); ctx.lineTo(i*gs, s); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(0, i*gs); ctx.lineTo(s, i*gs); ctx.stroke();
+    // Ceramic tile floor (white/gray checker)
+    for (let ix = 0; ix < W; ix++) {
+      for (let iz = 0; iz < D; iz++) {
+        const col = (ix + iz) % 2 === 0 ? 0xDDDDDD : 0xAAAAAA;
+        const tile = box(1, 0.05, 1, col, ix - W/2 + 0.5, 0, iz - D/2 + 0.5);
+        tile.receiveShadow = true; tile.castShadow = false; add(tile);
       }
-    }, 256, { roughness: 0.95, metalness: 0 });
-    stoneMat.map.repeat.set(8, 6);
-    const floor = new THREE.Mesh(new THREE.BoxGeometry(W, 0.1, D), stoneMat);
-    floor.position.set(0, 0, 0); floor.receiveShadow = true; add(floor);
+    }
 
-    // Walls
-    const wt = 0.3;
-    [
-      [W, H, wt, 0, H/2, D/2], [W, H, wt, 0, H/2, -D/2],
-      [wt, H, D, W/2, H/2, 0], [wt, H, D, -W/2, H/2, 0],
-    ].forEach(([w, h, d, x, y, z]) => {
-      add(box(w, h, d, DARK_WALL, x, y, z));
-      addC(collider(w, h, d, x, y, z));
-    });
-    add(box(W, 0.1, D, 0x2A2A3A, 0, H, 0));
+    // Outer walls
+    const wt = 0.2;
+    add(box(W, H, wt, WALL_WHT, 0, H/2, D/2));   addC(collider(W, H, wt, 0, H/2, D/2));
+    add(box(W, H, wt, WALL_WHT, 0, H/2, -D/2));  addC(collider(W, H, wt, 0, H/2, -D/2));
+    add(box(wt, H, D, WALL_WHT, W/2, H/2, 0));   addC(collider(wt, H, D, W/2, H/2, 0));
+    add(box(wt, H, D, WALL_WHT, -W/2, H/2, 0));  addC(collider(wt, H, D, -W/2, H/2, 0));
+    add(box(W, 0.1, D, 0x111111, 0, H, 0)); // ceiling
 
-    // Large industrial double-basin sinks
-    [[-12, D/2-0.9], [0, D/2-0.9], [12, D/2-0.9]].forEach(([sx, sz]) => {
-      // Counter
-      add(box(2.4, 0.08, 1.0, STEEL, sx, 0.92, sz));
-      // Basin 1
-      add(box(0.9, 0.35, 0.75, STEEL, sx-0.6, 0.78, sz));
-      // Basin 2
-      add(box(0.9, 0.35, 0.75, STEEL, sx+0.6, 0.78, sz));
-      // Legs
-      [-1, 1].forEach(s => add(box(0.08, 0.92, 0.08, DARK_ST, sx+s*1.1, 0.46, sz-0.4)));
-      [-1, 1].forEach(s => add(box(0.08, 0.92, 0.08, DARK_ST, sx+s*1.1, 0.46, sz+0.4)));
-      // Open under-sink space (hidden from view — good hiding spot)
-      addC(collider(2.5, 1.1, 1.1, sx, 0.55, sz));
-    });
+    // Walk-in freezer room (top-left)
+    add(box(8, H, wt, STEEL, -W/2+4, H/2, -D/2+12)); addC(collider(8, H, wt, -W/2+4, H/2, -D/2+12)); 
+    add(box(wt, H, 12, STEEL, -W/2+12, H/2, -D/2+6)); addC(collider(wt, H, 12, -W/2+12, H/2, -D/2+6)); 
 
-    // Metal prep tables
-    [[-8, -8], [0, -8], [8, -8], [-8, 5], [8, 5]].forEach(([tx, tz]) => {
-      add(box(2, 0.06, 1, STEEL, tx, 1.0, tz));
-      [-0.85, 0.85].forEach(ox => [-0.4, 0.4].forEach(oz => add(box(0.07, 1, 0.07, DARK_ST, tx+ox, 0.5, tz+oz))));
-      addC(collider(2.1, 1.1, 1.1, tx, 0.55, tz));
-    });
+    // Inside freezer props: Ice blocks
+    add(box(2, 2, 2, FREEZER, -W/2+2, 1, -D/2+2)); addC(collider(2, 2, 2, -W/2+2, 1, -D/2+2));
+    add(box(2, 2, 2, FREEZER, -W/2+2, 1, -D/2+5)); addC(collider(2, 2, 2, -W/2+2, 1, -D/2+5));
+    add(box(2, 2, 2, FREEZER, -W/2+2, 3, -D/2+2)); addC(collider(2, 2, 2, -W/2+2, 3, -D/2+2));
+    // Blue light inside freezer
+    this._addLight(new THREE.PointLight(0x88CCFF, 1.5, 15)).position.set(-W/2+6, 5, -D/2+6);
 
-    // Shelving racks
-    [[-W/2+1.5, -6], [-W/2+1.5, 6]].forEach(([sx, sz]) => {
-      add(box(0.08, 3, 0.08, DARK_ST, sx, 1.5, sz-0.8));
-      add(box(0.08, 3, 0.08, DARK_ST, sx, 1.5, sz+0.8));
-      for (let r = 0; r < 3; r++) add(box(0.08, 0.05, 1.6, STEEL, sx, 0.5+r*0.9, sz));
-      addC(collider(0.3, 3, 1.8, sx, 1.5, sz));
-    });
+    // Huge Kitchen Islands
+    add(box(12, 1.2, 4, STEEL, 0, 0.6, -5)); addC(collider(12, 1.2, 4, 0, 0.6, -5));
+    add(box(12, 1.2, 4, STEEL, 0, 0.6, 8));  addC(collider(12, 1.2, 4, 0, 0.6, 8));
 
-    // Lighting — cold grey/blue industrial
-    this._addLight(new THREE.HemisphereLight(0x8899AA, 0x222233, 0.8));
-    const dl = new THREE.DirectionalLight(0xAABBCC, 1.0);
-    dl.position.set(0, 20, 5); dl.castShadow = true;
+    // Stoves on back wall (Right side)
+    for (let i=0; i<4; i++) {
+      add(box(2, 1.2, 2, STOVE_BLK, 5 + i*3, 0.6, -D/2+1)); addC(collider(2, 1.2, 2, 5 + i*3, 0.6, -D/2+1));
+      add(cyl(0.3, 0.3, 0.1, 0xFF4400, 5 + i*3 - 0.5, 1.25, -D/2+1)); // hot burner
+    }
+
+    // Overhead Exhaust Vents (Climbable)
+    add(box(16, 0.5, 4, STEEL, 0, 5, -5)); addC(collider(16, 0.5, 4, 0, 5, -5));
+    add(box(2, 2, 2, STEEL, -6, 4, -5)); addC(collider(2, 2, 2, -6, 4, -5)); // support block to climb
+    // Ladder to vent
+    add(box(0.5, 5, 0.5, STEEL, -10, 2.5, -5)); addC(collider(0.5, 5, 0.5, -10, 2.5, -5));
+
+    // Racks and shelves
+    add(box(2, 4, 8, STEEL, W/2-2, 2, 0)); addC(collider(2, 4, 8, W/2-2, 2, 0));
+    add(box(2, 4, 8, STEEL, W/2-2, 2, 10)); addC(collider(2, 4, 8, W/2-2, 2, 10));
+
+    // Boxes on shelves
+    for (let i = 0; i < 4; i++) {
+      add(box(1, 1, 1, 0x8B5A2B, W/2-2, 0.5 + i, 0));
+      add(box(1, 1, 1, 0x8B5A2B, W/2-2, 0.5 + i, 10));
+    }
+
+    // Lights — strong bright fluorescent
+    this._addLight(new THREE.HemisphereLight(0xFFFFFF, 0x555555, 0.6));
+    const dl = new THREE.DirectionalLight(0xFFFFFF, 0.7);
+    dl.position.set(0, 20, 0); dl.castShadow = true;
     dl.shadow.mapSize.set(2048, 2048);
-    const ds = 28; dl.shadow.camera.left=-ds; dl.shadow.camera.right=ds;
-    dl.shadow.camera.top=ds; dl.shadow.camera.bottom=-ds; dl.shadow.camera.far=55;
-    this._addLight(dl);
+    const ds = 30; dl.shadow.camera.left=-ds; dl.shadow.camera.right=ds;
+    dl.shadow.camera.top=ds; dl.shadow.camera.bottom=-ds; dl.shadow.camera.far=60;
+    dl.shadow.bias=-0.001; this._addLight(dl);
 
-    // Fluorescent strip lights
-    [[-10, 0], [0, 0], [10, 0], [-10, -12], [10, -12]].forEach(([lx, lz]) => {
-      const fl = new THREE.PointLight(0xCCDDEE, 0.9, 18);
-      fl.position.set(lx, H-0.3, lz); this._addLight(fl);
-    });
-
-    this.scene.fog = new THREE.Fog(0x2A2A3A, 18, 55);
-    this.scene.background = new THREE.Color(0x2A2A3A);
+    this.scene.fog = new THREE.FogExp2(0x222222, 0.02);
+    this.scene.background = new THREE.Color(0x222222);
 
     this.spawnPoints.hider = [
-      {x:-10,y:0,z:0},{x:10,y:0,z:0},{x:0,y:0,z:-5},{x:-8,y:0,z:D/2-3},
-      {x:8,y:0,z:D/2-3},{x:0,y:0,z:10},{x:-15,y:0,z:-10},{x:15,y:0,z:-10},
-      {x:-5,y:0,z:-12},{x:5,y:0,z:-12},
+      {x:-15,y:0,z:10}, {x:15,y:0,z:-10}, {x:-10,y:0,z:-12}, {x:10,y:0,z:12},
+      {x:5,y:0,z:-8}, {x:-5,y:0,z:8}, {x:0,y:0,z:0}, {x:-18,y:0,z:-5},
+      {x:18,y:0,z:5}, {x:-22,y:0,z:-12}, {x:0,y:5.5,z:-5}, // Vent spawn!
     ];
-    this.spawnPoints.seeker = [{x:0,y:0,z:-D/2+3}];
+    this.spawnPoints.seeker = [{x:0,y:0,z:D/2-3},{x:5,y:0,z:D/2-3}];
   }
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -1370,12 +1364,12 @@ export class MapBuilder {
   // clean flat surfaces, fluorescent lighting, lockers
   // ═══════════════════════════════════════════════════════════════════════
   _buildSchoolCorridor() {
-    const W = 52, D = 42, H = 5;
+    const W = 60, D = 45, H = 5.5;
     const add = m => this._add(m);
     const addC = c => this._addCol(c);
 
-    const LIME  = 0xBFFF40;
-    const LIME2 = 0xA0E030;
+    const LIME  = 0x32CD32;
+    const LIME2 = 0x2E8B57;
     const WHITE = 0xFFFFFF;
     const PALE  = 0xE8E8E8;
     const GRAY  = 0xBBBBBB;
@@ -1403,49 +1397,48 @@ export class MapBuilder {
     add(box(wt, H, D, LIME2, -W/2, H/2, 0)); addC(collider(wt, H, D, -W/2, H/2, 0));
     add(box(W, 0.1, D, WHITE, 0, H, 0));
 
-    // Skirting boards (white strip at base of walls)
-    add(box(W, 0.2, 0.08, WHITE, 0, 0.1, D/2-0.05));
-    add(box(W, 0.2, 0.08, WHITE, 0, 0.1, -D/2+0.05));
-    add(box(0.08, 0.2, D, WHITE, W/2-0.05, 0.1, 0));
-    add(box(0.08, 0.2, D, WHITE, -W/2+0.05, 0.1, 0));
+    // Raised seating areas/bleachers
+    for (let s = 0; s < 4; s++) {
+      add(box(16, 0.4, 2, 0x44AA44, -W/2+10, s*0.4+0.2, -D/2+2 + s*2));
+      addC(collider(16, 0.4, 2, -W/2+10, s*0.4+0.2, -D/2+2 + s*2));
+    }
 
-    // Lockers along walls
+    // Branching smaller classroom structure
+    add(box(14, H, wt, LIME, W/2-10, H/2, 5)); addC(collider(14, H, wt, W/2-10, H/2, 5));
+    add(box(wt, H, 10, LIME, W/2-17, H/2, 10)); addC(collider(wt, H, 10, W/2-17, H/2, 10));
+    // Desks inside classroom
+    for(let i=0; i<3; i++) {
+      for(let j=0; j<2; j++) {
+        add(box(1.2, 0.8, 1, 0xA0522D, W/2-6-i*3, 0.4, 8+j*3));
+        addC(collider(1.2, 0.8, 1, W/2-6-i*3, 0.4, 8+j*3));
+      }
+    }
+
+    // Lockers along walls (some acting as stairs)
     const lockerColors = [0x4499DD, 0xDD4444, 0x44DD44, 0xDDDD44, 0xDD8844, 0x8844DD];
-    for (let l = 0; l < 12; l++) {
+    for (let l = 0; l < 15; l++) {
       const col = lockerColors[l % lockerColors.length];
       const lx = -W/2 + 0.4;
-      const lz = -D/2 + 2 + l * 3;
+      const lz = -D/2 + 12 + l * 2;
       if (lz > D/2 - 1) break;
-      add(box(0.5, 2, 1.5, col, lx, 1, lz));
-      add(box(0.5, 0.03, 1.5, 0x333333, lx, 2.03, lz)); // divider
-      add(box(0.03, 0.06, 0.06, 0xCCCCCC, lx+0.28, 0.9, lz));  // handle
-      add(box(0.03, 0.06, 0.06, 0xCCCCCC, lx+0.28, 2.8, lz));  // handle
-      addC(collider(0.6, 2.1, 1.6, lx, 1.05, lz));
-    }
-    // Right wall lockers
-    for (let l = 0; l < 10; l++) {
-      const col = lockerColors[(l + 3) % lockerColors.length];
-      const lx = W/2 - 0.4;
-      const lz = -D/2 + 2 + l * 3.5;
-      if (lz > D/2 - 1) break;
-      add(box(0.5, 2, 1.5, col, lx, 1, lz));
-      addC(collider(0.6, 2.1, 1.6, lx, 1.05, lz));
+      // Staggered heights to climb
+      const lh = 2 + (l%3)*0.8; 
+      add(box(0.5, lh, 1.5, col, lx, lh/2, lz));
+      add(box(0.5, 0.03, 1.5, 0x333333, lx, lh+0.01, lz)); // top divider
+      addC(collider(0.6, lh, 1.6, lx, lh/2, lz));
     }
 
-    // Doorframes
-    [[-8, D/2], [8, D/2], [-8, -D/2], [8, -D/2]].forEach(([dx, dz]) => {
-      add(box(0.15, H, 0.15, 0xDDDDDD, dx-1.1, H/2, dz));
-      add(box(0.15, H, 0.15, 0xDDDDDD, dx+1.1, H/2, dz));
-      add(box(2.2, 0.15, 0.15, 0xDDDDDD, dx, H-0.5, dz));
-    });
+    // Large center partition to break up sight lines
+    add(box(12, H, wt, LIME2, 0, H/2, -10)); addC(collider(12, H, wt, 0, H/2, -10));
+    add(box(wt, H, 12, LIME2, 0, H/2, 10)); addC(collider(wt, H, 12, 0, H/2, 10));
 
     // Notice boards on walls
     add(box(2, 1.2, 0.1, 0x886633, 0, 2.5, D/2-0.15));
     add(box(1.8, 1.0, 0.06, 0xF5F5DC, 0, 2.5, D/2-0.1));
 
     // Fluorescent ceiling lights
-    for (let li = -2; li <= 2; li++) {
-      add(box(0.15, 0.06, 3, WHITE, li*8, H-0.05, 0));
+    for (let li = -3; li <= 3; li++) {
+      add(box(0.15, 0.06, 4, WHITE, li*8, H-0.05, 0));
     }
 
     // Lighting — very bright, sterile white
@@ -1453,7 +1446,7 @@ export class MapBuilder {
     const dl = new THREE.DirectionalLight(0xFFFFFF, 1.2);
     dl.position.set(0, 20, 0); dl.castShadow = true;
     dl.shadow.mapSize.set(2048, 2048);
-    const ds = 30; dl.shadow.camera.left=-ds; dl.shadow.camera.right=ds;
+    const ds = 35; dl.shadow.camera.left=-ds; dl.shadow.camera.right=ds;
     dl.shadow.camera.top=ds; dl.shadow.camera.bottom=-ds; dl.shadow.camera.far=60;
     this._addLight(dl);
 
@@ -1468,18 +1461,17 @@ export class MapBuilder {
     this.spawnPoints.hider = [
       {x:-15,y:0,z:12},{x:15,y:0,z:-12},{x:0,y:0,z:15},{x:0,y:0,z:-15},
       {x:-10,y:0,z:0},{x:10,y:0,z:0},{x:-5,y:0,z:-8},{x:5,y:0,z:8},
-      {x:-18,y:0,z:-5},{x:18,y:0,z:5},
+      {x:-25,y:0,z:-15}, {x:-25,y:4,z:0}, // top of lockers
+      {x:25,y:0,z:15},
     ];
     this.spawnPoints.seeker = [{x:0,y:0,z:-D/2+4}];
   }
 
   // ═══════════════════════════════════════════════════════════════════════
   // MAP 5: TOY STABLE / FARM STORE
-  // Bright green carpet floor, white wooden fences, large brown horse statues,
-  // teal walls, yellow accents, red barn element
   // ═══════════════════════════════════════════════════════════════════════
   _buildToyStable() {
-    const W = 54, D = 44, H = 5;
+    const W = 60, D = 45, H = 6;
     const add = m => this._add(m);
     const addC = c => this._addCol(c);
 
@@ -1502,15 +1494,22 @@ export class MapBuilder {
     add(box(W, H, wt, TEAL, 0, H/2, -D/2));  addC(collider(W, H, wt, 0, H/2, -D/2));
     add(box(wt, H, D, TEAL, W/2, H/2, 0));   addC(collider(wt, H, D, W/2, H/2, 0));
     add(box(wt, H, D, TEAL, -W/2, H/2, 0));  addC(collider(wt, H, D, -W/2, H/2, 0));
-    add(box(W, 0.1, D, 0xDDDDDD, 0, H, 0));
+    add(box(W, 0.1, D, 0xDDDDDD, 0, H, 0)); // ceiling
 
-    // Red barn graphic / accent on back wall
-    add(box(10, 4, 0.1, BARN, 0, 2.5, D/2-0.15));
-    add(box(0.3, 4, 0.1, FENCE, -5, 2.5, D/2-0.1));
-    add(box(0.3, 4, 0.1, FENCE, 5, 2.5, D/2-0.1));
-    add(box(10, 0.3, 0.1, FENCE, 0, 4.65, D/2-0.1)); // roof line
+    // Giant Barn Structure in Center (Climbable)
+    add(box(16, 3, 16, BARN, 0, 1.5, 0)); addC(collider(16, 3, 16, 0, 1.5, 0));
+    // Slanted roof
+    add(box(16, 2, 8, BARN, 0, 3.5, -4, 0, 0, Math.PI/6)); 
+    add(box(16, 2, 8, BARN, 0, 3.5, 4, 0, 0, -Math.PI/6)); 
+    addC(collider(16, 1.5, 16, 0, 3.5, 0)); // simple block roof collider
 
-    // White fence structures (ranch style)
+    // Large Haybale stacks (Stairs to roof)
+    for(let s=0; s<4; s++) {
+      add(box(3, 0.8, 3, 0xD4A843, 10, s*0.8+0.4, s*3));
+      addC(collider(3, 0.8, 3, 10, s*0.8+0.4, s*3));
+    }
+
+    // Fence enclosures (paddocks)
     const fencePost = (x, y, z, h = 1.2, rotY = 0) => {
       add(box(0.1, h, 0.1, FENCE, x, h/2, z, rotY));
     };
@@ -1519,40 +1518,29 @@ export class MapBuilder {
       add(box(len, 0.08, 0.08, FENCE, x, 0.9, z, rotY));
     };
 
-    // Fence sections forming paddock areas
-    for (let fi = -3; fi <= 3; fi++) { fencePost(fi*4, 0, -D/2+4); }
-    fenceRail(0, -D/2+4, 25);
-    for (let fi = -3; fi <= 3; fi++) { fencePost(fi*4, 0, D/2-4); }
-    fenceRail(0, D/2-4, 25);
-    for (let fi = -2; fi <= 2; fi++) { fencePost(-W/2+4, 0, fi*4); }
-    fenceRail(-W/2+4, 0, 17, Math.PI/2);
+    // Front paddock
+    for (let fi = -3; fi <= 3; fi++) { fencePost(fi*3, 0, 16); }
+    fenceRail(0, 16, 18);
+    // Back paddock
+    for (let fi = -3; fi <= 3; fi++) { fencePost(fi*3, 0, -16); }
+    fenceRail(0, -16, 18);
 
-    // Horse statues on wooden platforms (4+ large brown horses)
+    // Horse statues on wooden platforms
     const horseAt = (hx, hz, rx = 0) => {
-      // Platform
       add(box(2, 0.15, 2, PLAT, hx, 0.08, hz));
       addC(collider(2.1, 0.15, 2.1, hx, 0.08, hz));
-      // Body
       add(box(0.7, 0.8, 1.4, HORSE, hx, 1.0, hz, rx));
-      // Head+neck (offset)
       const hn = hz + 0.8 * Math.cos(rx);
       const hny = 1.45;
       add(box(0.35, 0.55, 0.6, HORSE, hx, hny, hn));
-      // Legs x4
       [-0.25, 0.25].forEach(ox => [-0.45, 0.45].forEach(oz => {
         add(box(0.14, 0.7, 0.14, HORSE, hx+ox, 0.5, hz+oz));
       }));
-      // Tail
       add(box(0.1, 0.5, 0.08, 0x3A1F0A, hx, 1.0, hz - 0.75));
       addC(collider(0.8, 2, 1.6, hx, 1.0, hz));
     };
 
     horseAt(-14, -8); horseAt(14, -8); horseAt(-14, 8); horseAt(14, 8);
-    horseAt(-6, 14); horseAt(6, 14);
-
-    // Yellow signs and accents
-    add(box(2, 0.8, 0.1, GOLD, -W/2+3, 2, 0));
-    add(box(2, 0.8, 0.1, GOLD, W/2-3, 2, 0));
     add(box(0.1, 3, 0.1, FENCE, -W/2+2, 1.5, 5));
     add(box(0.1, 3, 0.1, FENCE, -W/2+2, 1.5, -5));
 
@@ -1588,7 +1576,7 @@ export class MapBuilder {
   // "HUNTER" text on floor, oversized cartoon shapes
   // ═══════════════════════════════════════════════════════════════════════
   _buildClownParty() {
-    const W = 60, D = 50, H = 6;
+    const W = 60, D = 50, H = 7;
     const add = m => this._add(m);
     const addC = c => this._addCol(c);
 
@@ -1608,15 +1596,6 @@ export class MapBuilder {
       }
     }
 
-    // "HUNTER" written on floor in huge white letters (simplified as white boxes)
-    const letterW = 1.0, letterH = 0.08, letterD = 3.5;
-    const letters = [-12, -6, 0, 6, 12, 16]; // H U N T E R positions
-    letters.forEach(lx => {
-      add(box(letterW, letterH, letterD, WHITE, lx, 0.06, 0));
-      add(box(letterW * 0.8, letterH, letterW, WHITE, lx, 0.06, -letterD/2 + 0.5));
-      add(box(letterW * 0.8, letterH, letterW, WHITE, lx, 0.06, letterD/2 - 0.5));
-    });
-
     // Walls — multicolor bold
     const wallCols = [RED, BLUE, YELLOW, PURPLE];
     const wt = 0.2;
@@ -1624,23 +1603,51 @@ export class MapBuilder {
     add(box(W, H, wt, wallCols[1], 0, H/2, -D/2));  addC(collider(W, H, wt, 0, H/2, -D/2));
     add(box(wt, H, D, wallCols[2], W/2, H/2, 0));   addC(collider(wt, H, D, W/2, H/2, 0));
     add(box(wt, H, D, wallCols[3], -W/2, H/2, 0));  addC(collider(wt, H, D, -W/2, H/2, 0));
-    add(box(W, 0.1, D, WHITE, 0, H, 0));
+    add(box(W, 0.1, D, WHITE, 0, H, 0)); // ceiling
 
-    // Giant balloons of various sizes scattered everywhere
+    // Giant inflatable bounce house/maze (Center)
+    add(box(16, 1.5, 16, BLUE, 0, 0.75, 0)); addC(collider(16, 1.5, 16, 0, 0.75, 0)); // base
+    add(box(1, 4, 1, RED, -7.5, 2, -7.5)); addC(collider(1, 4, 1, -7.5, 2, -7.5)); // pillar
+    add(box(1, 4, 1, RED, 7.5, 2, -7.5)); addC(collider(1, 4, 1, 7.5, 2, -7.5)); // pillar
+    add(box(1, 4, 1, RED, -7.5, 2, 7.5)); addC(collider(1, 4, 1, -7.5, 2, 7.5)); // pillar
+    add(box(1, 4, 1, RED, 7.5, 2, 7.5)); addC(collider(1, 4, 1, 7.5, 2, 7.5)); // pillar
+    add(box(16, 0.5, 16, YELLOW, 0, 4.25, 0)); addC(collider(16, 0.5, 16, 0, 4.25, 0)); // roof
+    
+    // Bounce house internal maze walls
+    add(box(8, 2, 0.5, PURPLE, 0, 2.5, -3)); addC(collider(8, 2, 0.5, 0, 2.5, -3));
+    add(box(0.5, 2, 8, GREEN, 3, 2.5, 0)); addC(collider(0.5, 2, 8, 3, 2.5, 0));
+    // Slide out of bounce house
+    add(box(4, 0.2, 10, YELLOW, 0, 1.5, 12, -Math.PI/6, 0, 0)); addC(collider(4, 0.2, 10, 0, 1.5, 12));
+
+    // Ball pit (Left side)
+    add(box(12, 0.5, 12, YELLOW, -W/2+8, 0.25, 0)); addC(collider(12, 0.5, 12, -W/2+8, 0.25, 0)); // wall
+    add(box(10, 1.5, 10, 0x111111, -W/2+8, 0.75, 0)); // 'balls' simplified
+    addC(collider(10, 1.5, 10, -W/2+8, 0.75, 0)); 
+    // Step to ball pit
+    add(box(4, 0.5, 2, GREEN, -W/2+14, 0.25, 0)); addC(collider(4, 0.5, 2, -W/2+14, 0.25, 0));
+
+    // "HUNTER" written on floor in huge white letters
+    const letterW = 1.0, letterH = 0.08, letterD = 3.5;
+    const letters = [-12, -6, 0, 6, 12, 16]; 
+    letters.forEach(lx => {
+      add(box(letterW, letterH, letterD, WHITE, lx, 0.06, -D/2+6));
+      add(box(letterW * 0.8, letterH, letterW, WHITE, lx, 0.06, -D/2+6 -letterD/2 + 0.5));
+      add(box(letterW * 0.8, letterH, letterW, WHITE, lx, 0.06, -D/2+6 + letterD/2 - 0.5));
+    });
+
+    // Giant balloons
     const balloonData = [
       [BLUE, -20, 1.8, 15, 1.8], [PURPLE, 18, 2.5, -10, 2.5],
       [RED, 8, 1.5, 20, 1.5], [GREEN, -15, 3, -18, 3],
       [YELLOW, 22, 2, 5, 2], [BLUE, -5, 3.5, -22, 3.5],
       [RED, 0, 2, 12, 2], [PURPLE, -22, 1.8, 8, 1.8],
       [GREEN, 14, 1.2, -6, 1.2], [YELLOW, -8, 2.5, -8, 2.5],
-      // ceiling balloons
       [RED, -18, H-1, -12, 1.2], [BLUE, 10, H-1, 18, 1.0],
       [GREEN, -6, H-0.8, 20, 1.3], [YELLOW, 20, H-0.9, -18, 0.9],
     ];
 
     balloonData.forEach(([col, bx, by, bz, r]) => {
       add(sphere(r, col, bx, by, bz));
-      // String
       if (by < H - 1) add(cyl(0.015, 0.015, by, WHITE, bx, by/2, bz, 4));
       if (r > 1.2) addC(collider(r*2.2, r*2.2, r*2.2, bx, by, bz));
     });
@@ -1677,18 +1684,17 @@ export class MapBuilder {
     this.spawnPoints.hider = [
       {x:-15,y:0,z:12},{x:15,y:0,z:-12},{x:0,y:0,z:18},{x:0,y:0,z:-18},
       {x:-22,y:0,z:0},{x:22,y:0,z:0},{x:-8,y:0,z:-8},{x:8,y:0,z:8},
-      {x:0,y:0,z:0},{x:-18,y:0,z:-18},{x:18,y:0,z:18},
+      {x:0,y:4.5,z:0}, // spawn on bounce house roof!
+      {x:-18,y:0,z:-18},{x:18,y:0,z:18},
     ];
     this.spawnPoints.seeker = [{x:0,y:0,z:-D/2+4},{x:-5,y:0,z:-D/2+4}];
   }
 
   // ═══════════════════════════════════════════════════════════════════════
   // MAP 7: PENGUIN HOTEL ROOM
-  // Deep blue diamond wallpaper, "PENGUIN HOTEL" cardboard boxes,
-  // colorful plush toy characters, yellow hula hoops, stacked clutter
   // ═══════════════════════════════════════════════════════════════════════
   _buildPenguinHotel() {
-    const W = 48, D = 40, H = 5;
+    const W = 55, D = 45, H = 7;
     const add = m => this._add(m);
     const addC = c => this._addCol(c);
 
@@ -1697,106 +1703,90 @@ export class MapBuilder {
     const RED_PLUSH  = 0xE74C3C;
     const BLUE_PLUSH = 0x3498DB;
     const YEL_PLUSH  = 0xF1C40F;
-    const HOOP_YEL   = 0xFFD700;
+    const ICE        = 0xCCEEFF;
     const FLOOR      = 0x3A2A1A;
 
     // Dark wood floor
     const floor = new THREE.Mesh(new THREE.BoxGeometry(W, 0.1, D), mat(FLOOR, { roughness: 0.8 }));
     floor.position.set(0, 0, 0); floor.receiveShadow = true; add(floor);
 
-    // Walls — deep blue with diamond pattern (simulated with darker blue)
+    // Walls — deep blue
     const wt = 0.2;
     add(box(W, H, wt, WALL_BLUE, 0, H/2, D/2));   addC(collider(W, H, wt, 0, H/2, D/2));
     add(box(W, H, wt, WALL_BLUE, 0, H/2, -D/2));  addC(collider(W, H, wt, 0, H/2, -D/2));
     add(box(wt, H, D, WALL_BLUE, W/2, H/2, 0));   addC(collider(wt, H, D, W/2, H/2, 0));
     add(box(wt, H, D, WALL_BLUE, -W/2, H/2, 0));  addC(collider(wt, H, D, -W/2, H/2, 0));
-    add(box(W, 0.1, D, 0x0D2244, 0, H, 0));
+    add(box(W, 0.1, D, 0x0D2244, 0, H, 0)); // ceiling
 
-    // Diamond wallpaper pattern (lighter blue dots on walls)
-    const diamondPositions = [
-      [-10, 2.5, D/2-0.1], [0, 2.5, D/2-0.1], [10, 2.5, D/2-0.1],
-      [-15, 1.5, D/2-0.1], [-5, 1.5, D/2-0.1], [5, 1.5, D/2-0.1], [15, 1.5, D/2-0.1],
-    ];
-    diamondPositions.forEach(([dx, dy, dz]) => {
-      add(box(0.4, 0.4, 0.05, 0x2A5A9E, dx, dy, dz));
-      add(box(0.6, 0.05, 0.05, 0x2A5A9E, dx, dy, dz));
-      add(box(0.05, 0.6, 0.05, 0x2A5A9E, dx, dy, dz));
-    });
+    // Giant Igloo Structure (Top Right)
+    const igR = 6;
+    add(sphere(igR, ICE, W/2-8, 0, -D/2+8)); 
+    addC(collider(igR*1.8, igR*1.5, igR*1.8, W/2-8, igR/2, -D/2+8)); // simple collider
+    // Tunnel to igloo
+    add(cyl(2, 2, 4, ICE, W/2-8, 1, -D/2+16, 16, Math.PI/2)); addC(collider(4, 2, 4, W/2-8, 1, -D/2+16));
+    // Ice steps to climb on top of the igloo
+    for(let i=0; i<5; i++) {
+      add(box(2, 0.5, 2, ICE, W/2-16, i*1, -D/2+8 + i*2));
+      addC(collider(2, 0.5, 2, W/2-16, i*1, -D/2+8 + i*2));
+    }
 
-    // Stacked cardboard boxes "PENGUIN HOTEL" 
+    // Stacked cardboard boxes "PENGUIN HOTEL" acting as walls/maze
     const boxStacks = [
-      {x:-14, z:10, cols:[CARDBOARD,CARDBOARD,0xBB9050]},
-      {x:12,  z:-8, cols:[CARDBOARD,0xBB9050,CARDBOARD]},
+      {x:-14, z:10, cols:[CARDBOARD,CARDBOARD,0xBB9050,CARDBOARD]},
+      {x:12,  z:15, cols:[CARDBOARD,0xBB9050,CARDBOARD,0xBB9050]},
       {x:-8,  z:-12,cols:[0xBB9050,CARDBOARD,CARDBOARD]},
-      {x:16,  z:12, cols:[CARDBOARD,CARDBOARD,CARDBOARD]},
+      {x:-20, z:5, cols:[CARDBOARD,CARDBOARD,CARDBOARD,CARDBOARD]},
       {x:-18, z:-5, cols:[CARDBOARD,0xBB9050,0xBB9050]},
     ];
     boxStacks.forEach(({x, z, cols}) => {
       cols.forEach((col, i) => {
-        const s = 0.9 - i*0.1;
-        add(box(s*1.4, s, s*1.0, col, x, s/2 + i*0.85, z));
+        const s = 1.2 - i*0.1; // slightly larger boxes
+        add(box(s*1.4, s, s*1.0, col, x, s/2 + i*1.0, z));
       });
-      addC(collider(1.5, 2.7, 1.1, x, 1.35, z));
+      addC(collider(1.8, cols.length*1.1, 1.4, x, cols.length/2, z));
     });
 
-    // Colorful plush toy characters (round soft shapes)
+    // Colorful plush toy characters scattered
     const plushData = [
-      [RED_PLUSH, -10, 0, 8], [BLUE_PLUSH, 10, 0, -6],
-      [YEL_PLUSH, -6, 0, -10], [RED_PLUSH, 14, 0, 10],
+      [RED_PLUSH, -10, 0, 8], [BLUE_PLUSH, 10, 0, 16],
+      [YEL_PLUSH, -6, 0, -10], [RED_PLUSH, 14, 0, 20],
       [BLUE_PLUSH, -18, 0, -10], [YEL_PLUSH, 6, 0, 16],
+      [BLUE_PLUSH, W/2-8, igR, -D/2+8], // on top of igloo!
     ];
     plushData.forEach(([col, px, py, pz]) => {
-      // Round body
-      add(sphere(0.7, col, px, py + 0.7, pz));
-      // Small head
-      add(sphere(0.35, col, px, py + 1.6, pz));
-      // Small arms
+      add(sphere(0.7, col, px, py + 0.7, pz)); // Round body
+      add(sphere(0.35, col, px, py + 1.6, pz)); // Small head
       add(sphere(0.18, mat(col, {}), px - 0.75, py + 0.8, pz));
       add(sphere(0.18, mat(col, {}), px + 0.75, py + 0.8, pz));
       addC(collider(1.4, 2.0, 1.4, px, py + 1.0, pz));
     });
 
-    // Yellow hula hoops — some on walls, some on floor
-    [[-12, 2.5, D/2-0.2], [8, 2.5, -D/2+0.2], [W/2-0.2, 2.5, 5]].forEach(([hx, hy, hz]) => {
-      const hoopG = new THREE.TorusGeometry(0.5, 0.06, 8, 32);
-      const hoop = new THREE.Mesh(hoopG, mat(HOOP_YEL, { emissive: HOOP_YEL, emissiveIntensity: 0.3 }));
-      hoop.position.set(hx, hy, hz);
-      hoop.castShadow = true; add(hoop);
-    });
-    // Floor hoops
-    [[4, 0.06, -5], [-4, 0.06, 12]].forEach(([hx, hy, hz]) => {
-      const hoopG = new THREE.TorusGeometry(0.6, 0.07, 8, 32);
-      const hoop = new THREE.Mesh(hoopG, mat(HOOP_YEL));
-      hoop.position.set(hx, hy, hz);
-      hoop.rotation.x = Math.PI / 2;
-      hoop.castShadow = true; add(hoop);
-    });
-
-    // Hotel furniture — small ornate bed
-    add(box(2.5, 0.4, 1.5, 0x8B4513, -W/2+3, 0.2, -5));
-    add(box(2.5, 0.6, 0.2, 0xAA6633, -W/2+3, 0.6, -5.65)); // headboard
-    addC(collider(2.6, 1, 1.6, -W/2+3, 0.5, -5));
+    // Hotel bed
+    add(box(4.5, 0.6, 3.0, 0x8B4513, -W/2+5, 0.3, -D/2+6));
+    add(box(4.5, 1.2, 0.4, 0xAA6633, -W/2+5, 1.2, -D/2+4.5)); // headboard
+    addC(collider(4.6, 1.5, 3.2, -W/2+5, 0.75, -D/2+6));
 
     // Lighting — moody hotel with warm pockets
     this._addLight(new THREE.HemisphereLight(0x4466AA, 0x0A1A33, 0.6));
     const dl = new THREE.DirectionalLight(0x8899CC, 0.8);
     dl.position.set(-5, 15, 5); dl.castShadow = true;
     dl.shadow.mapSize.set(2048, 2048);
-    const ds = 28; dl.shadow.camera.left=-ds; dl.shadow.camera.right=ds;
-    dl.shadow.camera.top=ds; dl.shadow.camera.bottom=-ds; dl.shadow.camera.far=55;
+    const ds = 35; dl.shadow.camera.left=-ds; dl.shadow.camera.right=ds;
+    dl.shadow.camera.top=ds; dl.shadow.camera.bottom=-ds; dl.shadow.camera.far=60;
     this._addLight(dl);
 
     // Warm hotel room accent lights
-    const pl1 = new THREE.PointLight(0xFFCC88, 1.2, 20); pl1.position.set(-W/2+3, 2, 0); this._addLight(pl1);
-    const pl2 = new THREE.PointLight(0x8899FF, 0.8, 25); pl2.position.set(W/2-3, 3, 0);  this._addLight(pl2);
+    const pl1 = new THREE.PointLight(0xFFCC88, 1.2, 20); pl1.position.set(-W/2+5, 3, -D/2+6); this._addLight(pl1);
+    const pl2 = new THREE.PointLight(0x8899FF, 0.8, 25); pl2.position.set(W/2-8, 4, -D/2+8);  this._addLight(pl2); // igloo light
     const pl3 = new THREE.PointLight(0xFFAA44, 0.9, 15); pl3.position.set(0, 2.5, D/2-3); this._addLight(pl3);
 
-    this.scene.fog = new THREE.Fog(0x0D1A33, 20, 55);
+    this.scene.fog = new THREE.Fog(0x0D1A33, 20, 65);
     this.scene.background = new THREE.Color(0x0D1A33);
 
     this.spawnPoints.hider = [
       {x:-12,y:0,z:10},{x:12,y:0,z:-8},{x:0,y:0,z:12},{x:0,y:0,z:-12},
       {x:-15,y:0,z:-8},{x:15,y:0,z:8},{x:5,y:0,z:0},{x:-5,y:0,z:0},
+      {x:W/2-8, y:igR+1, z:-D/2+8}, // Spawn on igloo!
       {x:-18,y:0,z:0},{x:8,y:0,z:14},
     ];
     this.spawnPoints.seeker = [{x:0,y:0,z:-D/2+4},{x:6,y:0,z:-D/2+4}];
