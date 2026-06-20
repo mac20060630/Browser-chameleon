@@ -147,41 +147,35 @@ export class DetectionSystem {
     this._onDetectionUpdate?.(detections);
   }
 
-  /**
-   * Calculate how "visible" the hider is based on their painted colors.
-   * Returns 0 (perfectly hidden) to 1 (completely white/unpainted).
-   * @returns {number}
-   * @private
-   */
   _getColorMismatchScore() {
-    if (!this.localModel) return 1.0;
+    if (!this.localModel || !this.localModel.context) return 1.0;
+
+    const ctx = this.localModel.context;
+    const w = this.localModel.textureSize;
+    const h = this.localModel.textureSize;
+
+    // Sample the center of each of the 6 UV regions mapped in the unified canvas
+    const samplePoints = [
+      { x: w * (1/6), y: h * 0.25 },
+      { x: w * (3/6), y: h * 0.25 },
+      { x: w * (5/6), y: h * 0.25 },
+      { x: w * (1/6), y: h * 0.75 },
+      { x: w * (3/6), y: h * 0.75 },
+      { x: w * (5/6), y: h * 0.75 },
+    ];
 
     let totalDiff = 0;
-    let partCount = 0;
-
-    const parts = ['head', 'torso', 'leftArm', 'rightArm', 'leftLeg', 'rightLeg'];
-    for (const partName of parts) {
-      const entry = this.localModel.canvasTextures?.[partName];
-      if (!entry) continue;
-
-      const { context, canvas } = entry;
-      // Sample the center pixel
-      const px = context.getImageData(canvas.width / 2, canvas.height / 2, 1, 1).data;
+    for (const pt of samplePoints) {
+      const px = ctx.getImageData(Math.floor(pt.x), Math.floor(pt.y), 1, 1).data;
       const r = px[0] / 255;
       const g = px[1] / 255;
       const b = px[2] / 255;
 
-      // Distance from white (1, 1, 1)
       const diff = Math.sqrt((1 - r) ** 2 + (1 - g) ** 2 + (1 - b) ** 2) / Math.sqrt(3);
       totalDiff += diff;
-      partCount++;
     }
 
-    if (partCount === 0) return 1.0;
-
-    // Invert: well-camouflaged (far from white) → lower score
-    // Unpainted (close to white) → higher score
-    const avgDiff = totalDiff / partCount;
+    const avgDiff = totalDiff / 6;
     return 1.0 - Math.min(avgDiff * 2, 1.0);
   }
 }

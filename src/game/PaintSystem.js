@@ -136,11 +136,11 @@ export class PaintSystem {
         if (hit) {
           this.saveUndoState();
           if (this.currentPattern === 'solid') {
-            this.character.fillPart(hit.partName, this.currentColor);
+            this.character.fillAll(this.currentColor);
           } else {
-            this._applyPattern(hit.partName, this.currentPattern);
+            this._applyPattern('unified', this.currentPattern);
           }
-          this.onPaintChange?.(hit.partName);
+          this.onPaintChange?.('unified');
         }
         break;
       }
@@ -179,15 +179,14 @@ export class PaintSystem {
     const hit = this._raycastCharacter(ndcX, ndcY);
     if (!hit) return;
 
-    this.character.paintAt(
-      hit.partName,
+    this.character.paintAtUnified(
       hit.uv.x,
       hit.uv.y,
       this.currentColor,
       this.brushSize,
     );
 
-    this.onPaintChange?.(hit.partName);
+    this.onPaintChange?.('unified');
   }
 
   /**
@@ -199,29 +198,19 @@ export class PaintSystem {
   _raycastCharacter(ndcX, ndcY) {
     this.raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), this.camera);
 
-    const meshes = Object.values(this.character.bodyParts);
-    const intersects = this.raycaster.intersectObjects(meshes, false);
+    if (!this.character.skinnedMesh) return null;
+
+    const intersects = this.raycaster.intersectObject(this.character.skinnedMesh, false);
 
     if (intersects.length === 0) return null;
 
     const hit = intersects[0];
-    const partName = hit.object.name;
+    const partName = hit.object.name; // Will be 'UnifiedBody'
 
-    // UV coordinates — some geometries may not have UVs; fall back to
-    // projected coords in that case.
+    // UV coordinates
     let uv = hit.uv;
     if (!uv) {
-      // Approximate UV from the local hit point
-      const local = hit.object.worldToLocal(hit.point.clone());
-      const bbox = new THREE.Box3().setFromObject(hit.object);
-      const size = new THREE.Vector3();
-      bbox.getSize(size);
-      uv = new THREE.Vector2(
-        (local.x - bbox.min.x) / (size.x || 1),
-        (local.y - bbox.min.y) / (size.y || 1),
-      );
-      uv.x = THREE.MathUtils.clamp(uv.x, 0, 1);
-      uv.y = THREE.MathUtils.clamp(uv.y, 0, 1);
+      uv = new THREE.Vector2(0.5, 0.5); // Fallback
     }
 
     return { partName, uv, point: hit.point };
@@ -297,11 +286,15 @@ export class PaintSystem {
    * @param {string} pattern – 'solid' | 'checkers' | 'stripes-h' | 'stripes-v' | 'gradient' | 'dots'
    */
   _applyPattern(partName, pattern) {
-    const entry = this.character.getCanvasForPart(partName);
-    if (!entry) return;
+    if (!this.character.canvas) return;
 
-    const { context, texture, canvas } = entry;
-    const size = canvas.width; // assumed square
+    const canvas = this.character.canvas;
+    const context = this.character.context;
+    const texture = this.character.texture;
+    
+    const w = canvas.width;
+    const h = canvas.height;
+    
     const { r, g, b } = this.currentColor;
 
     // Darker variant for two-tone patterns
@@ -314,12 +307,12 @@ export class PaintSystem {
     const lg = Math.min(255, g + 60);
     const lb = Math.min(255, b + 60);
 
-    const imageData = context.createImageData(size, size);
+    const imageData = context.createImageData(w, h);
     const data = imageData.data;
 
-    for (let py = 0; py < size; py++) {
-      for (let px = 0; px < size; px++) {
-        const idx = (py * size + px) * 4;
+    for (let py = 0; py < h; py++) {
+      for (let px = 0; px < w; px++) {
+        const idx = (py * w + px) * 4;
         let cr = r, cg = g, cb = b;
 
         switch (pattern) {
@@ -343,7 +336,7 @@ export class PaintSystem {
           }
 
           case 'gradient': {
-            const t = py / size;
+            const t = py / h;
             cr = Math.round(r + (lr - r) * t);
             cg = Math.round(g + (lg - g) * t);
             cb = Math.round(b + (lb - b) * t);
@@ -375,6 +368,7 @@ export class PaintSystem {
 
     context.putImageData(imageData, 0, 0);
     texture.needsUpdate = true;
+    this.character.dirty = true;
   }
 
   // -----------------------------------------------------------------------
@@ -479,9 +473,7 @@ export class PaintSystem {
   fillAll(r, g, b) {
     this.saveUndoState();
     const color = { r, g, b };
-    for (const partName of Object.keys(this.character.bodyParts)) {
-      this.character.fillPart(partName, color);
-    }
+    this.character.fillAll(color);
   }
 
   /**

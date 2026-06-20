@@ -93,10 +93,12 @@ export class PlayerController {
       const key = e.key.toLowerCase();
       if (key in this.keys) this.keys[key] = true;
 
-      // Crouch / Stand / Climb
+      // Crouch / Stand / Embed
       if (e.code === 'KeyC') this._setCrouch(true);
       if (e.code === 'KeyX') this._setCrouch(false);
-      if (e.code === 'Space') { e.preventDefault(); this._climb(); }
+      if (e.code === 'Space') { e.preventDefault(); this.moveUp(); }
+      if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') { e.preventDefault(); this.moveDown(); }
+      if (e.code === 'KeyZ') this.detach();
     };
 
     this._onKeyUp = (/** @type {KeyboardEvent} */ e) => {

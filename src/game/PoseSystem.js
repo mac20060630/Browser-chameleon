@@ -287,12 +287,12 @@ export class PoseSystem {
    */
   _applyPose(poseId) {
     const pose = POSE_DEFINITIONS[poseId];
-    if (!pose || !this.character || !this.character.bodyParts) return;
+    if (!pose || !this.character || !this.character.skeleton) return;
 
     const transforms = pose.transforms;
 
     for (const [partName, transform] of Object.entries(transforms)) {
-      const part = this.character.bodyParts[partName];
+      const part = this.character.skeleton.getBoneByName(partName);
       if (!part) continue;
 
       // Apply position

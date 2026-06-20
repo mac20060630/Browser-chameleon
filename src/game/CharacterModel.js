@@ -1,13 +1,5 @@
-/**
- * CharacterModel.js
- * 
- * Procedural 3D humanoid character built entirely from Three.js primitives.
- * Each body part has its own CanvasTexture for per-part painting.
- * Supports 12 predefined poses, undo/redo paint snapshots, and network serialization.
- * 
- * Cute, chunky proportions — total height ~2 units.
- */
 import * as THREE from 'three';
+import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
 
 // ---------------------------------------------------------------------------
 // Pose library — maps body-part names to local position / rotation overrides
@@ -161,8 +153,17 @@ const BODY_PART_DEFS = [
   { name: 'rightLeg',  type: 'capsule',  args: [0.18, 0.4, 32, 32],          defaultPos: [0.2, 0.35, 0] },
 ];
 
+const UV_REGIONS = {
+  head:     { u: 0,   v: 0.5, w: 1/3, h: 0.5 },
+  torso:    { u: 1/3, v: 0.5, w: 1/3, h: 0.5 },
+  leftArm:  { u: 2/3, v: 0.5, w: 1/3, h: 0.5 },
+  rightArm: { u: 0,   v: 0,   w: 1/3, h: 0.5 },
+  leftLeg:  { u: 1/3, v: 0,   w: 1/3, h: 0.5 },
+  rightLeg: { u: 2/3, v: 0,   w: 1/3, h: 0.5 },
+};
+
 // ---------------------------------------------------------------------------
-// CharacterModel
+// CharacterModel (Unified Seamless Mesh)
 // ---------------------------------------------------------------------------
 export class CharacterModel {
   /**
@@ -176,26 +177,21 @@ export class CharacterModel {
     this.group = new THREE.Group();
     this.group.name = 'CharacterModel';
 
-    /** Individual body-part meshes keyed by name. */
-    this.bodyParts = {};
+    /** The single unified SkinnedMesh */
+    this.skinnedMesh = null;
+    /** The skeleton */
+    this.skeleton = null;
 
-    /** Per-part canvas textures: { canvas, context, texture }. */
-    this.canvasTextures = {};
-
-    /** Per-part MeshStandardMaterial instances. */
-    this.materials = {};
-
-    /** Resolution of each body-part canvas (square). */
-    this.textureSize = 256;
+    /** Unified canvas texture state */
+    this.textureSize = 1024;
+    this.canvas = null;
+    this.context = null;
+    this.texture = null;
 
     /** Current pose identifier. */
     this.currentPoseId = 'standing';
-
-    /** When locked the character cannot change pose (hider locked in). */
     this.isLocked = false;
-
-    /** Tracks which parts have been modified since last sync. */
-    this.dirtyParts = new Set();
+    this.dirty = false;
 
     this._build();
   }
@@ -204,25 +200,88 @@ export class CharacterModel {
   // Construction
   // -----------------------------------------------------------------------
 
-  /** Assemble the full character from primitives. */
   _build() {
+    const geometries = [];
+    const bones = [];
+    
+    // Create root bone
+    const rootBone = new THREE.Bone();
+    rootBone.name = 'root';
+    bones.push(rootBone);
+
+    let boneIndex = 1;
+
     for (const def of BODY_PART_DEFS) {
-      this._createBodyPart(
-        def.name,
-        this._geometryFromDef(def),
-        new THREE.Vector3(...def.defaultPos),
-        new THREE.Euler(0, 0, 0),
-      );
+      let geom = this._geometryFromDef(def);
+
+      // Create a bone for this body part, child of the root bone.
+      // We position the bone at the default position so its local rotation pivot
+      // perfectly matches the original individual mesh center.
+      const bone = new THREE.Bone();
+      bone.name = def.name;
+      bone.position.set(...def.defaultPos);
+      rootBone.add(bone);
+      bones.push(bone);
+
+      // We must translate the geometry vertices to the defaultPos as well,
+      // because in the bind pose, the mesh vertices are in world/character space.
+      geom.translate(...def.defaultPos);
+
+      // Apply the UV offset and scale to map into the unified atlas
+      const region = UV_REGIONS[def.name];
+      const uvAttr = geom.attributes.uv;
+      for (let i = 0; i < uvAttr.count; i++) {
+        const u = uvAttr.getX(i);
+        const v = uvAttr.getY(i);
+        uvAttr.setXY(i, u * region.w + region.u, v * region.h + region.v);
+      }
+
+      // Add skin indices and weights. This geometry is entirely controlled by this one bone.
+      const posAttr = geom.attributes.position;
+      const skinIndices = [];
+      const skinWeights = [];
+      for (let i = 0; i < posAttr.count; i++) {
+        skinIndices.push(boneIndex, 0, 0, 0); // attached to this part's bone
+        skinWeights.push(1, 0, 0, 0);         // 100% influence
+      }
+      geom.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(skinIndices, 4));
+      geom.setAttribute('skinWeight', new THREE.Float32BufferAttribute(skinWeights, 4));
+
+      geometries.push(geom);
+      boneIndex++;
     }
-    // Apply the default standing pose
+
+    // Merge everything into one seamless geometry buffer
+    const mergedGeom = BufferGeometryUtils.mergeGeometries(geometries, false);
+    
+    // We can compute vertex normals to smooth out the joins perfectly
+    // mergedGeom.computeVertexNormals();
+
+    this.skeleton = new THREE.Skeleton(bones);
+
+    this._initUnifiedCanvas();
+
+    this.material = new THREE.MeshStandardMaterial({
+      map: this.texture,
+      roughness: 0.8,
+      metalness: 0.0,
+      skinning: true // enable skeletal animation
+    });
+
+    this.skinnedMesh = new THREE.SkinnedMesh(mergedGeom, this.material);
+    this.skinnedMesh.name = 'UnifiedBody';
+    this.skinnedMesh.add(rootBone); // Must add skeleton root to the scene graph
+    this.skinnedMesh.bind(this.skeleton);
+    
+    this.skinnedMesh.castShadow = true;
+    this.skinnedMesh.receiveShadow = true;
+
+    this.group.add(this.skinnedMesh);
+
+    // Default pose
     this.setPose('standing');
   }
 
-  /**
-   * Instantiate a geometry from a blueprint definition.
-   * @param {{ type: string, args: number[] }} def
-   * @returns {THREE.BufferGeometry}
-   */
   _geometryFromDef(def) {
     switch (def.type) {
       case 'sphere':   return new THREE.SphereGeometry(...def.args);
@@ -233,77 +292,43 @@ export class CharacterModel {
     }
   }
 
-  /**
-   * Create a single body-part mesh with its own CanvasTexture.
-   * @param {string} name       – e.g. 'head', 'leftArm'
-   * @param {THREE.BufferGeometry} geometry
-   * @param {THREE.Vector3} position
-   * @param {THREE.Euler}   rotation
-   */
-  _createBodyPart(name, geometry, position, rotation) {
-    const { canvas, context, texture } = this._initCanvasTexture(name);
+  _initUnifiedCanvas() {
+    this.canvas = document.createElement('canvas');
+    this.canvas.width = this.textureSize;
+    this.canvas.height = this.textureSize;
 
-    const material = new THREE.MeshStandardMaterial({
-      map: texture,
-      roughness: 0.8,
-      metalness: 0.0,
-    });
+    this.context = this.canvas.getContext('2d', { willReadFrequently: true });
+    this.context.fillStyle = '#ffffff';
+    this.context.fillRect(0, 0, this.textureSize, this.textureSize);
 
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.name = name;
-    mesh.position.copy(position);
-    mesh.rotation.copy(rotation);
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
+    // Draw the smiley face on the head region
+    const hReg = UV_REGIONS.head;
+    const hx = hReg.u * this.textureSize;
+    const hy = (1.0 - hReg.v - hReg.h) * this.textureSize; // canvas Y is inverted vs UV V
+    const hw = hReg.w * this.textureSize;
+    const hh = hReg.h * this.textureSize;
+    
+    const cx = hx + hw / 2;
+    const cy = hy + hh / 2;
 
-    this.bodyParts[name] = mesh;
-    this.canvasTextures[name] = { canvas, context, texture };
-    this.materials[name] = material;
-    this.group.add(mesh);
-  }
+    this.context.fillStyle = '#222222';
+    this.context.beginPath();
+    this.context.arc(cx - hw * 0.18, cy - hh * 0.12, hw * 0.06, 0, Math.PI * 2);
+    this.context.fill();
+    this.context.beginPath();
+    this.context.arc(cx + hw * 0.18, cy - hh * 0.12, hw * 0.06, 0, Math.PI * 2);
+    this.context.fill();
 
-  /**
-   * Create a 2D canvas filled white, wrap it in a CanvasTexture.
-   * @param {string} _name – unused, reserved for future per-part defaults
-   * @returns {{ canvas: HTMLCanvasElement, context: CanvasRenderingContext2D, texture: THREE.CanvasTexture }}
-   */
-  _initCanvasTexture(name) {
-    const canvas = document.createElement('canvas');
-    canvas.width = this.textureSize;
-    canvas.height = this.textureSize;
+    this.context.strokeStyle = '#222222';
+    this.context.lineWidth = hw * 0.045;
+    this.context.lineCap = 'round';
+    this.context.beginPath();
+    this.context.arc(cx, cy - hh * 0.04, hw * 0.2, 0.2, Math.PI - 0.2);
+    this.context.stroke();
 
-    const context = canvas.getContext('2d');
-    context.fillStyle = '#ffffff';
-    context.fillRect(0, 0, this.textureSize, this.textureSize);
-
-    // Draw a simple smiley face on the head — two dot eyes + curved smile
-    if (name === 'head') {
-      const s = this.textureSize;
-      const cx = s / 2;
-
-      // Eyes — two dark circles
-      context.fillStyle = '#222222';
-      context.beginPath();
-      context.arc(cx - s * 0.18, s * 0.38, s * 0.06, 0, Math.PI * 2);
-      context.fill();
-      context.beginPath();
-      context.arc(cx + s * 0.18, s * 0.38, s * 0.06, 0, Math.PI * 2);
-      context.fill();
-
-      // Smile — arc below the eyes
-      context.strokeStyle = '#222222';
-      context.lineWidth = s * 0.045;
-      context.lineCap = 'round';
-      context.beginPath();
-      context.arc(cx, s * 0.46, s * 0.2, 0.2, Math.PI - 0.2);
-      context.stroke();
-    }
-
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.colorSpace = THREE.SRGBColorSpace;
-    texture.needsUpdate = true;
-
-    return { canvas, context, texture };
+    this.texture = new THREE.CanvasTexture(this.canvas);
+    this.texture.colorSpace = THREE.SRGBColorSpace;
+    this.texture.needsUpdate = true;
   }
 
   // -----------------------------------------------------------------------
@@ -311,74 +336,38 @@ export class CharacterModel {
   // -----------------------------------------------------------------------
 
   /**
-   * Retrieve the drawing surface for a body part.
-   * @param {string} partName
-   * @returns {{ canvas: HTMLCanvasElement, context: CanvasRenderingContext2D, texture: THREE.CanvasTexture } | null}
+   * Paint directly at the specified unified UV coordinates
    */
-  getCanvasForPart(partName) {
-    return this.canvasTextures[partName] || null;
-  }
-
-  /**
-   * Draw a filled circle on a body part's canvas at the given UV coordinates.
-   * @param {string} partName
-   * @param {number} u – 0‥1 horizontal
-   * @param {number} v – 0‥1 vertical
-   * @param {{ r: number, g: number, b: number }} color – 0‥255 per channel
-   * @param {number} brushSize – radius in canvas pixels
-   */
-  paintAt(partName, u, v, color, brushSize) {
-    const entry = this.canvasTextures[partName];
-    if (!entry) return;
-
-    const { context, texture } = entry;
+  paintAtUnified(u, v, color, brushSize) {
     const x = u * this.textureSize;
-    const y = (1 - v) * this.textureSize; // flip V — canvas Y is top-down
+    const y = (1 - v) * this.textureSize;
 
-    context.fillStyle = `rgb(${color.r},${color.g},${color.b})`;
-    context.beginPath();
-    context.arc(x, y, brushSize, 0, Math.PI * 2);
-    context.fill();
+    this.context.fillStyle = `rgb(${color.r},${color.g},${color.b})`;
+    this.context.beginPath();
+    this.context.arc(x, y, brushSize, 0, Math.PI * 2);
+    this.context.fill();
 
-    texture.needsUpdate = true;
-    this.dirtyParts.add(partName);
+    this.texture.needsUpdate = true;
+    this.dirty = true;
   }
 
   /**
-   * Fill an entire body part with a solid colour.
-   * @param {string} partName
-   * @param {{ r: number, g: number, b: number }} color
+   * Used for 'fill tool' over the entire body
    */
-  fillPart(partName, color) {
-    const entry = this.canvasTextures[partName];
-    if (!entry) return;
-
-    const { context, texture } = entry;
-    context.fillStyle = `rgb(${color.r},${color.g},${color.b})`;
-    context.fillRect(0, 0, this.textureSize, this.textureSize);
-
-    texture.needsUpdate = true;
-    this.dirtyParts.add(partName);
+  fillAll(color) {
+    this.context.fillStyle = `rgb(${color.r},${color.g},${color.b})`;
+    this.context.fillRect(0, 0, this.textureSize, this.textureSize);
+    this.texture.needsUpdate = true;
+    this.dirty = true;
   }
 
-  /**
-   * Set a material property (metalness / roughness) on ALL body parts.
-   * @param {'metalness' | 'roughness'} property
-   * @param {number} value – 0‥1
-   */
   setMaterialProperty(property, value) {
-    for (const mat of Object.values(this.materials)) {
-      if (property in mat) {
-        mat[property] = value;
-        mat.needsUpdate = true;
-      }
+    if (property in this.material) {
+      this.material[property] = value;
+      this.material.needsUpdate = true;
     }
   }
 
-  /**
-   * Toggle a bottom shadow gradient using an ambient occlusion map.
-   * @param {boolean} active 
-   */
   setBottomShadow(active) {
     if (active && !this._shadowTexture) {
       const canvas = document.createElement('canvas');
@@ -395,58 +384,34 @@ export class CharacterModel {
       this._shadowTexture.needsUpdate = true;
     }
 
-    for (const mesh of Object.values(this.bodyParts)) {
-      // Three.js r151+ uses the same UV set for aoMap
-      const mat = mesh.material;
-      if (active) {
-        mat.aoMap = this._shadowTexture;
-        mat.aoMapIntensity = 1.0;
-      } else {
-        mat.aoMap = null;
-        mat.aoMapIntensity = 0.0;
-      }
-      mat.needsUpdate = true;
+    if (active) {
+      this.material.aoMap = this._shadowTexture;
+      this.material.aoMapIntensity = 1.0;
+    } else {
+      this.material.aoMap = null;
+      this.material.aoMapIntensity = 0.0;
     }
+    this.material.needsUpdate = true;
   }
 
   // -----------------------------------------------------------------------
-  // Undo / Redo helpers (ImageData snapshots)
+  // Undo / Redo helpers
   // -----------------------------------------------------------------------
 
-  /**
-   * Snapshot the current state of every body-part canvas.
-   * @returns {Record<string, ImageData>}
-   */
   getUndoState() {
-    const state = {};
-    for (const [name, { context }] of Object.entries(this.canvasTextures)) {
-      state[name] = context.getImageData(0, 0, this.textureSize, this.textureSize);
-    }
-    return state;
+    return this.context.getImageData(0, 0, this.textureSize, this.textureSize);
   }
 
-  /**
-   * Restore all canvases from a previously saved state.
-   * @param {Record<string, ImageData>} state
-   */
-  restoreState(state) {
-    for (const [name, imageData] of Object.entries(state)) {
-      const entry = this.canvasTextures[name];
-      if (!entry) continue;
-      entry.context.putImageData(imageData, 0, 0);
-      entry.texture.needsUpdate = true;
-      this.dirtyParts.add(name);
-    }
+  restoreState(imageData) {
+    this.context.putImageData(imageData, 0, 0);
+    this.texture.needsUpdate = true;
+    this.dirty = true;
   }
 
   // -----------------------------------------------------------------------
   // Pose system
   // -----------------------------------------------------------------------
 
-  /**
-   * Apply a predefined pose.
-   * @param {string} poseId – one of the POSES keys
-   */
   setPose(poseId) {
     if (this.isLocked) return;
     const pose = POSES[poseId];
@@ -456,29 +421,28 @@ export class CharacterModel {
     }
 
     for (const [partName, transform] of Object.entries(pose)) {
-      const mesh = this.bodyParts[partName];
-      if (!mesh) continue;
-      mesh.position.set(transform.position.x, transform.position.y, transform.position.z);
-      mesh.rotation.set(transform.rotation.x, transform.rotation.y, transform.rotation.z);
+      const bone = this.skeleton.getBoneByName(partName);
+      if (!bone) continue;
+      
+      // The bone is parented to the root. Its default position is def.defaultPos.
+      // The POSES object defines absolute positions/rotations relative to the character.
+      // Since our bones are direct children of the root at their defaultPos,
+      // we must set their position and rotation to match the target.
+      bone.position.set(transform.position.x, transform.position.y, transform.position.z);
+      bone.rotation.set(transform.rotation.x, transform.rotation.y, transform.rotation.z);
     }
 
     this.currentPoseId = poseId;
   }
 
-  /**
-   * Preview a pose before locking it in.
-   * @param {string} poseId
-   */
   previewPose(poseId) {
     this.setPose(poseId);
   }
 
-  /** Freeze the character so no further pose changes are allowed. */
   lockPose() {
     this.isLocked = true;
   }
 
-  /** Unfreeze the character. */
   unlockPose() {
     this.isLocked = false;
   }
@@ -487,102 +451,63 @@ export class CharacterModel {
   // Serialization (networking)
   // -----------------------------------------------------------------------
 
-  /**
-   * Produce a compact representation of all paint data suitable for sending
-   * over the network. Each body-part canvas is serialized as a base-64 PNG
-   * data URL (small enough for WebRTC / WebSocket messages).
-   * @param {boolean} onlyDirty - If true, only serializes modified parts and clears dirty flag.
-   * @returns {Record<string, string>}
-   */
   serializePaintData(onlyDirty = false) {
-    const data = {};
-    for (const [name, { canvas }] of Object.entries(this.canvasTextures)) {
-      if (!onlyDirty || this.dirtyParts.has(name)) {
-        data[name] = canvas.toDataURL('image/png');
-      }
-    }
-    if (onlyDirty) {
-      this.dirtyParts.clear();
-    }
+    if (onlyDirty && !this.dirty) return null;
+    
+    // We only have one canvas now, so we serialize it as 'unified'
+    const data = {
+      unified: this.canvas.toDataURL('image/png')
+    };
+
+    if (onlyDirty) this.dirty = false;
     return data;
   }
 
-  /**
-   * Apply paint from a network-received payload.
-   * @param {Record<string, string>} data – partName ➜ data-URL
-   * @returns {Promise<void>}
-   */
   async deserializePaintData(data) {
-    const promises = Object.entries(data).map(([name, dataUrl]) => {
-      return new Promise((resolve) => {
-        const entry = this.canvasTextures[name];
-        if (!entry) { resolve(); return; }
+    if (!data.unified) return;
 
-        const img = new Image();
-        img.onload = () => {
-          entry.context.clearRect(0, 0, this.textureSize, this.textureSize);
-          entry.context.drawImage(img, 0, 0, this.textureSize, this.textureSize);
-          entry.texture.needsUpdate = true;
-          resolve();
-        };
-        img.onerror = resolve; // fail silently
-        img.src = dataUrl;
-      });
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        this.context.clearRect(0, 0, this.textureSize, this.textureSize);
+        this.context.drawImage(img, 0, 0, this.textureSize, this.textureSize);
+        this.texture.needsUpdate = true;
+        resolve();
+      };
+      img.onerror = resolve;
+      img.src = data.unified;
     });
-
-    await Promise.all(promises);
   }
 
   // -----------------------------------------------------------------------
   // Scene management
   // -----------------------------------------------------------------------
 
-  /** Add the character group to the scene. */
   addToScene() {
     if (!this.group.parent) {
       this.scene.add(this.group);
     }
   }
 
-  /** Remove the character group from the scene. */
   removeFromScene() {
     if (this.group.parent) {
       this.scene.remove(this.group);
     }
   }
 
-  /**
-   * Teleport the character to a world position.
-   * @param {number} x
-   * @param {number} y
-   * @param {number} z
-   */
   setPosition(x, y, z) {
     this.group.position.set(x, y, z);
   }
 
-  /**
-   * Rotate the character around the Y axis.
-   * @param {number} y – radians
-   */
   setRotation(y) {
     this.group.rotation.y = y;
   }
 
-  /** Clean up all GPU resources. */
   dispose() {
     this.removeFromScene();
-
-    for (const mesh of Object.values(this.bodyParts)) {
-      mesh.geometry.dispose();
-    }
-    for (const mat of Object.values(this.materials)) {
-      mat.map?.dispose();
-      mat.dispose();
-    }
-
-    this.bodyParts = {};
-    this.canvasTextures = {};
-    this.materials = {};
+    this.skinnedMesh.geometry.dispose();
+    this.material.map?.dispose();
+    this.material.dispose();
   }
 }
+

@@ -856,23 +856,18 @@ export class GameManager {
 
   _flashPlayerRed(model) {
     // Briefly flash the model red
-    if (!model || !model.bodyParts) return;
-    const originalColors = {};
+    if (!model || !model.skinnedMesh) return;
 
-    for (const [name, mesh] of Object.entries(model.bodyParts)) {
-      if (mesh && mesh.material) {
-        originalColors[name] = mesh.material.color.getHex();
-        mesh.material.emissive = new THREE.Color(0xff0000);
-        mesh.material.emissiveIntensity = 0.5;
-      }
+    const mesh = model.skinnedMesh;
+    if (mesh && mesh.material) {
+      mesh.material.emissive = new THREE.Color(0xff0000);
+      mesh.material.emissiveIntensity = 0.5;
     }
 
     setTimeout(() => {
-      for (const [name, mesh] of Object.entries(model.bodyParts)) {
-        if (mesh && mesh.material) {
-          mesh.material.emissive = new THREE.Color(0x000000);
-          mesh.material.emissiveIntensity = 0;
-        }
+      if (mesh && mesh.material) {
+        mesh.material.emissive = new THREE.Color(0x000000);
+        mesh.material.emissiveIntensity = 0;
       }
     }, 800);
   }
